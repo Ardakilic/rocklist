@@ -1,0 +1,226 @@
+name: Build and Release Binaries
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.24.3'
+
+jobs:
+  build:
+    name: Build Cross-Platform Binaries
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        check-latest: true
+
+    - name: Get commit info
+      id: get_commit
+      run: |
+        echo "commit_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        echo "commit_date=$(git log -1 --format=%cd --date=short)" >> $GITHUB_OUTPUT
+
+    - name: Set up build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-multilib gcc-mingw-w64 zip
+
+    - name: Build binaries
+      run: |
+        mkdir -p dist
+        COMMIT_HASH="${{ steps.get_commit.outputs.commit_sha }}"
+
+        # Windows
+        GOOS=windows GOARCH=386 go build -ldflags="-s -w" -o dist/rocklist-windows-x86.exe cmd/main.go
+        GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/rocklist-windows-x64.exe cmd/main.go
+        GOOS=windows GOARCH=arm64 go build -ldflags="-s -w" -o dist/rocklist-windows-arm64.exe cmd/main.go
+
+        # Linux
+        GOOS=linux GOARCH=386 go build -ldflags="-s -w" -o dist/rocklist-linux-x86 cmd/main.go
+        GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/rocklist-linux-x64 cmd/main.go
+        GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/rocklist-linux-arm64 cmd/main.go
+        GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-s -w" -o dist/rocklist-linux-armv6 cmd/main.go
+        GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o dist/rocklist-linux-armv7 cmd/main.go
+
+        # macOS
+        GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/rocklist-macos-x64 cmd/main.go
+        GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/rocklist-macos-arm64 cmd/main.go
+
+        # Zip all binaries with commit hash in zip filename
+        cd dist
+        for file in *; do
+          zip "${file%-*}-${COMMIT_HASH}.zip" "$file"
+          rm "$file"
+        done
+        cd ..
+
+    - name: Create release notes
+      id: release_notes
+      run: |
+        echo "# RockList Binaries" > release_notes.md
+        echo "" >> release_notes.md
+        echo "Commit: ${{ steps.get_commit.outputs.commit_sha }} (from ${{ steps.get_commit.outputs.commit_date }})" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "## Platforms" >> release_notes.md
+        echo "- Windows (x86, x64, arm64)" >> release_notes.md
+        echo "- Linux (x86, x64, arm64, armv6, armv7)" >> release_notes.md
+        echo "- macOS (x64, arm64)" >> release_notes.md
+
+    - name: Get existing release
+      id: get_release
+      uses: actions/github-script@v6
+      with:
+        script: |
+          try {
+            const releases = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+
+            const existingRelease = releases.data.find(release => release.name === 'Binaries');
+
+            if (existingRelease) {
+              return {
+                release_id: existingRelease.id,
+                exists: true
+              };
+            } else {
+              return {
+                exists: false
+              };
+            }
+          } catch (error) {
+            console.log("Error fetching releases:", error);
+            return {
+              exists: false
+            };
+          }
+        result-encoding: string
+
+    - name: Delete existing assets from release
+      if: fromJSON(steps.get_release.outputs.result).exists
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const release_id = fromJSON('${{ steps.get_release.outputs.result }}').release_id;
+
+          const assets = await github.rest.repos.listReleaseAssets({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            release_id: release_id
+          });
+
+          for (const asset of assets.data) {
+            await github.rest.repos.deleteReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              asset_id: asset.id
+            });
+            console.log(`Deleted asset: ${asset.name}`);
+          }
+
+    - name: Create or update release
+      id: create_release
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const releaseNotes = fs.readFileSync('release_notes.md', 'utf8');
+          const existingRelease = fromJSON('${{ steps.get_release.outputs.result }}');
+
+          let release;
+
+          if (existingRelease.exists) {
+            console.log(`Updating existing release ID: ${existingRelease.release_id}`);
+            release = await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: existingRelease.release_id,
+              name: 'Binaries',
+              body: releaseNotes,
+              prerelease: false,
+              make_latest: 'false'
+            });
+          } else {
+            console.log('Creating new release');
+            release = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: 'binaries',
+              name: 'Binaries',
+              body: releaseNotes,
+              prerelease: false,
+              make_latest: 'false'
+            });
+
+            // Pin the release by adding it to the repo description
+            try {
+              await github.rest.repos.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                description: `RockList - A dynamic playlist generator for Rockbox. See pinned release for binaries.`
+              });
+            } catch (error) {
+              console.log("Error updating repo description:", error);
+            }
+          }
+
+          return {
+            upload_url: release.data.upload_url,
+            id: release.data.id
+          };
+
+    - name: Upload release assets
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          const release_id = fromJSON('${{ steps.create_release.outputs.result }}').id;
+
+          const uploadAsset = async (file) => {
+            const fileName = path.basename(file);
+            const fileSize = fs.statSync(file).size;
+
+            // Determine content type
+            let contentType = 'application/octet-stream';
+            if (fileName.endsWith('.exe')) {
+              contentType = 'application/vnd.microsoft.portable-executable';
+            }
+
+            console.log(`Uploading ${fileName} (${fileSize} bytes)`);
+
+            const fileData = fs.readFileSync(file);
+
+            await github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release_id,
+              name: fileName,
+              data: fileData,
+              headers: {
+                'content-type': contentType,
+                'content-length': fileSize
+              }
+            });
+
+            console.log(`Uploaded ${fileName}`);
+          };
+
+          const distDir = 'dist';
+          const files = fs.readdirSync(distDir);
+
+          for (const file of files) {
+            await uploadAsset(path.join(distDir, file));
+          }
