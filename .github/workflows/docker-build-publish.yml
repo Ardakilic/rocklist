@@ -1,9 +1,12 @@
-name: Publish Docker Images
+name: Build and Publish Docker Images
 
 on:
+  workflow_run:
+    workflows: ["Continuous Integration"]
+    types:
+      - completed
+    branches: ["main"]
   push:
-    branches:
-      - main
     tags:
       - 'v*.*.*'
   workflow_dispatch:
@@ -15,6 +18,8 @@ permissions:
 
 jobs:
   push-to-docker:
+    # Only run if the CI workflow was successful or if this is triggered manually or by a tag
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
     name: Push to Docker Hub and GHCR
     runs-on: ubuntu-latest
     env:
