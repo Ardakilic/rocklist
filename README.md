@@ -123,13 +123,46 @@ API_SOURCE="lastfm" \
 You can also use a `.env` file:
 
 ```
+# API Credentials
 LASTFM_API_KEY=your_key
 LASTFM_API_SECRET=your_secret
 SPOTIFY_CLIENT_ID=your_id
 SPOTIFY_CLIENT_SECRET=your_secret
+
+# Paths
 ROCKBOX_PATH=/path/to/rockbox
 PLAYLIST_PATH=/path/to/playlists
-API_SOURCE=lastfm
+
+# API Selection
+API_SOURCE=lastfm  # Options: lastfm, spotify
+
+# Playlist Settings
+MAX_TRACKS=10      # Number of top tracks to include per artist 
+ARTIST_FILTER=     # Optional: specific artist(s) to generate playlists for, comma-separated
+SKIP_EXISTING=true # Skip artists that already have playlists
+
+# Logging
+LOG_LEVEL=info     # Options: debug, info, warn, error
+```
+
+### Complete Example
+
+Here's a full example with all possible configuration options:
+
+```bash
+# Running with all possible environment variables
+LASTFM_API_KEY="abc123" \
+LASTFM_API_SECRET="secret123" \
+SPOTIFY_CLIENT_ID="spotify123" \
+SPOTIFY_CLIENT_SECRET="spotifysecret123" \
+ROCKBOX_PATH="/media/ROCKBOX" \
+PLAYLIST_PATH="/media/ROCKBOX/Playlists" \
+API_SOURCE="lastfm" \
+MAX_TRACKS="15" \
+ARTIST_FILTER="Metallica,Iron Maiden" \
+SKIP_EXISTING="true" \
+LOG_LEVEL="debug" \
+./rocklist
 ```
 
 ## Project Structure

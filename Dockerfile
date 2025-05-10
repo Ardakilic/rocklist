@@ -12,7 +12,7 @@ RUN go mod download
 COPY . .
 
 # Build the app
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o rocklist cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o rocklist cmd/main.go
 
 # Production stage
 FROM gcr.io/distroless/base-debian12:nonroot AS final
