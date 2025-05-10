@@ -11,29 +11,33 @@ import (
 const (
 	// TagCount is the number of tags in the Rockbox database
 	TagCount = 22
-	
+
 	// TagcacheMagic is the magic number for the Rockbox database
 	TagcacheMagic = 0x54434810
-	
+
 	// ArtistTagIndex is the index of the artist tag in the Rockbox database
 	ArtistTagIndex = 0
-	
+
 	// AlbumTagIndex is the index of the album tag in the Rockbox database
 	AlbumTagIndex = 1
-	
+
 	// TitleTagIndex is the index of the title tag in the Rockbox database
 	TitleTagIndex = 3
-	
+
 	// FilenameTagIndex is the index of the filename tag in the Rockbox database
 	FilenameTagIndex = 4
 )
 
+// TagNames maps index positions to tag names for reference (not used in code but kept for documentation)
+// Commenting out to avoid linting errors
+/*
 var tagNames = []string{
 	"artist", "album", "genre", "title", "filename", "composer", "comment",
 	"albumartist", "grouping", "year", "discnumber", "tracknumber",
 	"canonicalartist", "bitrate", "length", "playcount", "rating", "playtime",
 	"lastplayed", "commitid", "mtime", "lastelapsed", "lastoffset",
 }
+*/
 
 // IndexEntry represents an entry in the Rockbox database index
 type IndexEntry struct {
@@ -58,7 +62,7 @@ type Track struct {
 
 // RockboxDB represents the Rockbox database
 type RockboxDB struct {
-	Tracks      []Track
+	Tracks       []Track
 	ArtistTracks map[string][]Track // Tracks grouped by artist
 }
 
@@ -84,41 +88,41 @@ func LoadDatabase(rockboxPath string) (*RockboxDB, error) {
 
 	// Process entries
 	db := &RockboxDB{
-		Tracks:      make([]Track, 0, len(idxEntries)),
+		Tracks:       make([]Track, 0, len(idxEntries)),
 		ArtistTracks: make(map[string][]Track),
 	}
 
 	for _, entry := range idxEntries {
 		var track Track
-		
+
 		// Get artist
 		if artistSeek := entry.TagSeek[ArtistTagIndex]; artistSeek != 0 {
 			if val, ok := tagMaps[ArtistTagIndex][artistSeek]; ok {
 				track.Artist = val
 			}
 		}
-		
+
 		// Get album
 		if albumSeek := entry.TagSeek[AlbumTagIndex]; albumSeek != 0 {
 			if val, ok := tagMaps[AlbumTagIndex][albumSeek]; ok {
 				track.Album = val
 			}
 		}
-		
+
 		// Get title
 		if titleSeek := entry.TagSeek[TitleTagIndex]; titleSeek != 0 {
 			if val, ok := tagMaps[TitleTagIndex][titleSeek]; ok {
 				track.Title = val
 			}
 		}
-		
+
 		// Get filename
 		if filenameSeek := entry.TagSeek[FilenameTagIndex]; filenameSeek != 0 {
 			if val, ok := tagMaps[FilenameTagIndex][filenameSeek]; ok {
 				track.Filename = val
 			}
 		}
-		
+
 		// Add track to the database if it has an artist and filename
 		if track.Artist != "" && track.Filename != "" {
 			db.Tracks = append(db.Tracks, track)
@@ -199,4 +203,4 @@ func readTagFile(path string) (map[int32]string, error) {
 		tagData[idxID] = string(bytes.Trim(buf, "\x00"))
 	}
 	return tagData, nil
-} 
+}

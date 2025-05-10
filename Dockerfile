@@ -27,7 +27,7 @@ LABEL org.opencontainers.image.authors="Arda Kilicdagi <arda@kilicdagi.com>" \
 WORKDIR /app
 
 # Copy binary from build stage
-COPY --from=build /app/rocklist /app/rocklist
+COPY --from=builder /app/rocklist /app/rocklist
 
 
 # Define volume for rockbox data
