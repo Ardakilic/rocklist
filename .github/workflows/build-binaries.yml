@@ -108,8 +108,17 @@ jobs:
           }
         result-encoding: string
 
+    - name: Check if release exists
+      id: check_release
+      run: |
+        if [[ "${{ steps.get_release.outputs.result }}" == *"\"exists\":true"* ]]; then
+          echo "release_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "release_exists=false" >> $GITHUB_OUTPUT
+        fi
+
     - name: Delete existing assets from release
-      if: fromJSON(steps.get_release.outputs.result).exists
+      if: steps.check_release.outputs.release_exists == 'true'
       uses: actions/github-script@v7
       with:
         script: |
@@ -141,34 +150,34 @@ jobs:
         script: |
           const fs = require('fs');
           const releaseNotes = fs.readFileSync('release_notes.md', 'utf8');
-
           const resultStr = '${{ steps.get_release.outputs.result }}';
-          const existingRelease = JSON.parse(resultStr);
-
           let release;
 
-          if (existingRelease.exists) {
-            console.log(`Updating existing release ID: ${existingRelease.release_id}`);
-            release = await github.rest.repos.updateRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: existingRelease.release_id,
-              name: 'Binaries',
-              body: releaseNotes,
-              prerelease: false,
-              make_latest: 'false'
-            });
-          } else {
-            console.log('Creating new release');
-            release = await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: 'binaries',
-              name: 'Binaries',
-              body: releaseNotes,
-              prerelease: false,
-              make_latest: 'false'
-            });
+          try {
+            const existingRelease = JSON.parse(resultStr);
+
+            if ('${{ steps.check_release.outputs.release_exists }}' === 'true') {
+              console.log(`Updating existing release ID: ${existingRelease.release_id}`);
+              release = await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: existingRelease.release_id,
+                name: 'Binaries',
+                body: releaseNotes,
+                prerelease: false,
+                make_latest: 'false'
+              });
+            } else {
+              console.log('Creating new release');
+              release = await github.rest.repos.createRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: 'binaries',
+                name: 'Binaries',
+                body: releaseNotes,
+                prerelease: false,
+                make_latest: 'false'
+              });
 
             // Pin the release by adding it to the repo description
             try {
@@ -193,7 +202,12 @@ jobs:
         script: |
           const fs = require('fs');
           const path = require('path');
-          const release_id = fromJSON('${{ steps.create_release.outputs.result }}').id;
+
+          const resultStr = '${{ steps.create_release.outputs.result }}';
+          const result = JSON.parse(resultStr);
+          const release_id = result.id;
+
+          console.log(`Uploading assets to release ID: ${release_id}`);
 
           const uploadAsset = async (file) => {
             const fileName = path.basename(file);
