@@ -113,7 +113,11 @@ jobs:
       uses: actions/github-script@v7
       with:
         script: |
-          const release_id = fromJSON('${{ steps.get_release.outputs.result }}').release_id;
+          const resultStr = '${{ steps.get_release.outputs.result }}';
+          const resultObj = JSON.parse(resultStr);
+          const release_id = resultObj.release_id;
+
+          console.log(`Processing release_id: ${release_id}`);
 
           const assets = await github.rest.repos.listReleaseAssets({
             owner: context.repo.owner,
@@ -137,7 +141,9 @@ jobs:
         script: |
           const fs = require('fs');
           const releaseNotes = fs.readFileSync('release_notes.md', 'utf8');
-          const existingRelease = fromJSON('${{ steps.get_release.outputs.result }}');
+
+          const resultStr = '${{ steps.get_release.outputs.result }}';
+          const existingRelease = JSON.parse(resultStr);
 
           let release;
 
