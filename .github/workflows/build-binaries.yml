@@ -110,14 +110,23 @@ jobs:
               repo: context.repo.repo
             });
 
-            const existingRelease = releases.data.find(release => release.name === 'Binaries');
+            // First look for release by name
+            let existingRelease = releases.data.find(release => release.name === 'Binaries');
+
+            // Then check by tag name as fallback
+            if (!existingRelease) {
+              existingRelease = releases.data.find(release => release.tag_name === 'binaries');
+            }
 
             if (existingRelease) {
+              console.log(`Found existing release: ID ${existingRelease.id}, Tag: ${existingRelease.tag_name}`);
               return {
                 release_id: existingRelease.id,
+                tag_name: existingRelease.tag_name,
                 exists: true
               };
             } else {
+              console.log("No existing release found");
               return {
                 exists: false
               };
@@ -185,7 +194,7 @@ jobs:
               existingRelease = { exists: false };
             }
 
-            if ('${{ steps.check_release.outputs.release_exists }}' === 'true') {
+            if ('${{ steps.check_release.outputs.release_exists }}' === 'true' && existingRelease && existingRelease.release_id) {
               console.log(`Updating existing release ID: ${existingRelease.release_id}`);
               release = await github.rest.repos.updateRelease({
                 owner: context.repo.owner,
@@ -198,15 +207,46 @@ jobs:
               });
             } else {
               console.log('Creating new release');
-              release = await github.rest.repos.createRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag_name: 'binaries',
-                name: 'Binaries',
-                body: releaseNotes,
-                prerelease: false,
-                make_latest: 'false'
-              });
+              try {
+                release = await github.rest.repos.createRelease({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tag_name: `binaries-${Date.now()}`,  // Add timestamp to avoid conflict
+                  name: 'Binaries',
+                  body: releaseNotes,
+                  prerelease: false,
+                  make_latest: 'false'
+                });
+              } catch (createError) {
+                console.log(`Error creating release: ${createError.message}`);
+                // If tag exists, try to find the release by tag and update it
+                if (createError.status === 422 && createError.message.includes('already_exists')) {
+                  console.log('Tag already exists, fetching release by tag to update it');
+                  const releases = await github.rest.repos.listReleases({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo
+                  });
+
+                  const tagRelease = releases.data.find(r => r.tag_name === 'binaries');
+
+                  if (tagRelease) {
+                    console.log(`Found release by tag, updating ID: ${tagRelease.id}`);
+                    release = await github.rest.repos.updateRelease({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      release_id: tagRelease.id,
+                      name: 'Binaries',
+                      body: releaseNotes,
+                      prerelease: false,
+                      make_latest: 'false'
+                    });
+                  } else {
+                    throw new Error('Could not locate release with existing tag');
+                  }
+                } else {
+                  throw createError;
+                }
+              }
             }
 
             // Pin the release by adding it to the repo description
