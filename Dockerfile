@@ -1,13 +1,10 @@
 # Build stage
-FROM golang:1.20-alpine AS build
+FROM golang:1.24.3 AS builder
 
 WORKDIR /app
 
-# Install git and dependencies
-RUN apk add --no-cache git
-
 # Copy go mod and sum files
-COPY go.mod ./
+COPY go.mod go.sum ./
 # Try to download dependencies
 RUN go mod download
 
@@ -18,18 +15,23 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o rocklist cmd/main.go
 
 # Production stage
-FROM gcr.io/distroless/static:nonroot
+FROM gcr.io/distroless/base-debian12:nonroot AS final
+
+LABEL org.opencontainers.image.authors="Arda Kilicdagi <arda@kilicdagi.com>" \
+      org.opencontainers.image.url="https://github.com/ardakilic/rocklist" \
+      org.opencontainers.image.documentation="https://github.com/ardakilic/rocklist" \
+      org.opencontainers.image.source="https://github.com/ardakilic/rocklist" \
+      org.opencontainers.image.title="rocklist" \
+      org.opencontainers.image.description="RockList - A dynamic playlist generator for Rockbox"
 
 WORKDIR /app
 
 # Copy binary from build stage
 COPY --from=build /app/rocklist /app/rocklist
 
-# Run as non-root user
-USER 65532:65532
 
 # Define volume for rockbox data
 VOLUME /rockbox
 
 # Set entrypoint
-ENTRYPOINT ["/app/rocklist"] 
+ENTRYPOINT ["/app/rocklist"]

@@ -1,0 +1,35 @@
+# EditorConfig helps maintain consistent coding styles for multiple developers
+# See https://editorconfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Unix-style newlines with a newline ending every file
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+trim_trailing_whitespace = true
+indent_style = tab
+indent_size = 2
+
+# Markdown files use two spaces for indentation
+[*.md]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
+# YAML files require spaces for indentation
+[{*.yml,*.yaml}]
+indent_style = space
+indent_size = 2
+
+# Use 2 spaces for JSON files
+[*.json]
+indent_style = space
+indent_size = 2
+
+# Go files conventionally use tabs
+[*.go]
+indent_style = tab
+indent_size = 2

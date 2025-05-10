@@ -11,7 +11,7 @@ func EnsureDirectoryExists(path string) error {
 	if path == "" {
 		return fmt.Errorf("empty directory path")
 	}
-	
+
 	// Check if directory exists
 	info, err := os.Stat(path)
 	if err == nil {
@@ -21,12 +21,12 @@ func EnsureDirectoryExists(path string) error {
 		}
 		return nil
 	}
-	
+
 	// Create directory if it doesn't exist
 	if os.IsNotExist(err) {
 		return os.MkdirAll(path, 0755)
 	}
-	
+
 	return err
 }
 
@@ -37,17 +37,17 @@ func CopyFile(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read file %s: %w", src, err)
 	}
-	
+
 	// Ensure the destination directory exists
-	dstDir := filepath.Dir(dst)@
+	dstDir := filepath.Dir(dst)
 	if err := EnsureDirectoryExists(dstDir); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dstDir, err)
 	}
-	
+
 	// Write the destination file
 	if err := os.WriteFile(dst, data, 0644); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", dst, err)
 	}
-	
+
 	return nil
-} 
+}
