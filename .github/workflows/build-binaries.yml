@@ -154,7 +154,14 @@ jobs:
           let release;
 
           try {
-            const existingRelease = JSON.parse(resultStr);
+            // Handle the result string properly
+            let existingRelease;
+            try {
+              existingRelease = JSON.parse(resultStr);
+            } catch (e) {
+              console.log("Warning: Could not parse release result as JSON, using empty object");
+              existingRelease = { exists: false };
+            }
 
             if ('${{ steps.check_release.outputs.release_exists }}' === 'true') {
               console.log(`Updating existing release ID: ${existingRelease.release_id}`);
@@ -207,10 +214,17 @@ jobs:
           const fs = require('fs');
           const path = require('path');
 
-          const resultStr = '${{ steps.create_release.outputs.result }}';
-          const result = JSON.parse(resultStr);
-          const release_id = result.id;
+          // Safely parse the result
+          let result;
+          try {
+            const resultStr = '${{ steps.create_release.outputs.result }}';
+            result = JSON.parse(resultStr);
+          } catch (e) {
+            console.error("Error parsing release result:", e);
+            throw new Error("Failed to parse release information. Cannot upload assets.");
+          }
 
+          const release_id = result.id;
           console.log(`Uploading assets to release ID: ${release_id}`);
 
           const uploadAsset = async (file) => {
