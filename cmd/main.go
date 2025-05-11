@@ -53,7 +53,11 @@ func main() {
 		artists = db.GetArtists()
 	}
 
-	fmt.Printf("Found %d artists in the Rockbox database\n", len(artists))
+	if len(cfg.Artists) > 0 {
+		fmt.Printf("Processing %d specified artists\n", len(artists))
+	} else {
+		fmt.Printf("Found %d artists in the Rockbox database\n", len(artists))
+	}
 	fmt.Printf("Using %s API for top tracks\n", cfg.APISource)
 	fmt.Printf("Generating playlists with up to %d tracks per artist\n", cfg.MaxTracksPerArtist)
 
@@ -109,10 +113,10 @@ func main() {
 	}
 
 	// Copy playlists to the Rockbox playlists directory if needed
-	rockboxPlaylistDir := filepath.Join(rockboxDir, "playlists")
-	if cfg.PlaylistPath != rockboxPlaylistDir {
-		fmt.Printf("\nCopying playlists to Rockbox playlists directory: %s\n", rockboxPlaylistDir)
-		if err := copyPlaylists(cfg.PlaylistPath, rockboxPlaylistDir); err != nil {
+	playlistDir := filepath.Join(cfg.DapRootPath, "Playlists")
+	if cfg.PlaylistPath != playlistDir {
+		fmt.Printf("\nCopying playlists to Rockbox playlists directory: %s\n", playlistDir)
+		if err := copyPlaylists(cfg.PlaylistPath, playlistDir); err != nil {
 			fmt.Printf("Error copying playlists: %v\n", err)
 		}
 	}
