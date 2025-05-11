@@ -44,14 +44,20 @@ func TestMatchTracks(t *testing.T) {
 	}
 
 	// Create a temporary directory for playlists
-	tempDir, err := os.MkdirTemp("", "playlist-test")
+	tempDir, err := os.MkdirTemp("", "dap-root-test")
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
 	}
 	defer os.RemoveAll(tempDir)
 
+	// Create a playlist directory
+	playlistDir := filepath.Join(tempDir, "Playlists")
+	if err := os.MkdirAll(playlistDir, 0755); err != nil {
+		t.Fatalf("Failed to create Playlists directory: %v", err)
+	}
+
 	// Create a playlist generator
-	generator := NewGenerator(db, apiClient, tempDir, 10)
+	generator := NewGenerator(db, apiClient, playlistDir, 10)
 
 	// Test matchTracks
 	matched := generator.matchTracks(apiClient.tracks, db.GetTracksForArtist("Artist1"))
@@ -82,11 +88,17 @@ func TestMatchTracks(t *testing.T) {
 
 func TestWritePlaylistFile(t *testing.T) {
 	// Create a temporary directory for playlists
-	tempDir, err := os.MkdirTemp("", "playlist-test")
+	tempDir, err := os.MkdirTemp("", "dap-root-test")
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
 	}
 	defer os.RemoveAll(tempDir)
+
+	// Create a playlist directory
+	playlistDir := filepath.Join(tempDir, "Playlists")
+	if err := os.MkdirAll(playlistDir, 0755); err != nil {
+		t.Fatalf("Failed to create Playlists directory: %v", err)
+	}
 
 	// Create a mock database
 	db := &database.RockboxDB{}
@@ -95,7 +107,7 @@ func TestWritePlaylistFile(t *testing.T) {
 	apiClient := &MockAPIClient{}
 
 	// Create a playlist generator
-	generator := NewGenerator(db, apiClient, tempDir, 10)
+	generator := NewGenerator(db, apiClient, playlistDir, 10)
 
 	// Create mock tracks - only include found tracks
 	tracks := []models.TopTrack{
@@ -109,7 +121,7 @@ func TestWritePlaylistFile(t *testing.T) {
 	}
 
 	// Check if the playlist file was created
-	playlistFile := filepath.Join(tempDir, "Artist1-top-2.m3u")
+	playlistFile := filepath.Join(playlistDir, "Artist1-top-2.m3u")
 	if _, err := os.Stat(playlistFile); os.IsNotExist(err) {
 		t.Errorf("Playlist file %s not created", playlistFile)
 	}
@@ -130,4 +142,4 @@ func TestWritePlaylistFile(t *testing.T) {
 	if string(content) != expectedContent {
 		t.Errorf("Expected playlist content:\n%s\n\nGot:\n%s", expectedContent, string(content))
 	}
-} 
+}

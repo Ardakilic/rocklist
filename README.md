@@ -49,7 +49,7 @@ docker pull ghcr.io/ardakilic/rocklist:latest
 docker pull ardakilic/rocklist:latest
 
 # Run with environment variables (using GitHub Container Registry)
-docker run --rm -v /path/to/rockbox:/rockbox \
+docker run --rm -v /path/to/dap_root:/dap_root \
   -e LASTFM_API_KEY="your_api_key" \
   -e LASTFM_API_SECRET="your_api_secret" \
   -e SPOTIFY_CLIENT_ID="your_client_id" \
@@ -57,7 +57,7 @@ docker run --rm -v /path/to/rockbox:/rockbox \
   ghcr.io/ardakilic/rocklist:latest
 
 # OR run with Docker Hub image
-docker run --rm -v /path/to/rockbox:/rockbox \
+docker run --rm -v /path/to/dap_root:/dap_root \
   -e LASTFM_API_KEY="your_api_key" \
   -e LASTFM_API_SECRET="your_api_secret" \
   -e SPOTIFY_CLIENT_ID="your_client_id" \
@@ -72,7 +72,7 @@ docker run --rm -v /path/to/rockbox:/rockbox \
 docker build -t rocklist .
 
 # Run with environment variables
-docker run --rm -v /path/to/rockbox:/rockbox \
+docker run --rm -v /path/to/dap_root:/dap_root \
   -e LASTFM_API_KEY="your_api_key" \
   -e LASTFM_API_SECRET="your_api_secret" \
   -e SPOTIFY_CLIENT_ID="your_client_id" \
@@ -104,16 +104,16 @@ LASTFM_API_KEY="your_key" \
 LASTFM_API_SECRET="your_secret" \
 SPOTIFY_CLIENT_ID="your_id" \
 SPOTIFY_CLIENT_SECRET="your_secret" \
-ROCKBOX_PATH="/path/to/rockbox" \
-PLAYLIST_PATH="/path/to/playlists" \
+DAP_ROOT="/path/to/dap_root" \
+PLAYLIST_PATH="/path/to/dap_root/Playlists" \
 API_SOURCE="lastfm" \
 ./rocklist
 
 # Or using command-line flags
 ./rocklist \
   --api-source lastfm \
-  --rockbox-path /path/to/rockbox \
-  --playlist-path /path/to/playlists \
+  --dap-root /path/to/dap_root \
+  --playlist-path /path/to/dap_root/Playlists \
   --artist "Artist Name" \
   --tracks 10
 ```
@@ -130,8 +130,8 @@ SPOTIFY_CLIENT_ID=your_id
 SPOTIFY_CLIENT_SECRET=your_secret
 
 # Paths
-ROCKBOX_PATH=/path/to/rockbox
-PLAYLIST_PATH=/path/to/playlists
+DAP_ROOT=/path/to/dap_root
+PLAYLIST_PATH=/path/to/dap_root/Playlists
 
 # API Selection
 API_SOURCE=lastfm  # Options: lastfm, spotify
@@ -155,8 +155,8 @@ LASTFM_API_KEY="abc123" \
 LASTFM_API_SECRET="secret123" \
 SPOTIFY_CLIENT_ID="spotify123" \
 SPOTIFY_CLIENT_SECRET="spotifysecret123" \
-ROCKBOX_PATH="/media/ROCKBOX" \
-PLAYLIST_PATH="/media/ROCKBOX/Playlists" \
+DAP_ROOT="/Volumes/IPOD" \
+PLAYLIST_PATH="/Volumes/IPOD/Playlists" \
 API_SOURCE="lastfm" \
 MAX_TRACKS="15" \
 ARTIST_FILTER="Metallica,Iron Maiden" \
@@ -179,8 +179,9 @@ LOG_LEVEL="debug" \
 
 - `.github/` - GitHub specific configurations
   - `workflows/` - CI/CD workflow definitions
-    - `docker-publish.yml` - Workflow for building and publishing Docker images to GHCR and Docker Hub
-    - `ci.yaml` - Workflow for continuous integration testing
+    - `docker-build-publish.yml` - Workflow for building and publishing Docker images to GHCR and Docker Hub
+    - `build-binaries.yml` - Workflow for building binary releases
+    - `ci.yml` - Workflow for continuous integration testing
 - `cmd/` - Application entry points
   - `main.go` - Entry point for the CLI application
 - `internal/` - Private application code
@@ -210,6 +211,7 @@ LOG_LEVEL="debug" \
 - `go.mod` - Go module definition and dependencies
 - `go.sum` - Checksums of the expected content of Go module dependencies
 - `LICENSE` - MIT License file
+- `README.md` - This very file
 
 ## License
 

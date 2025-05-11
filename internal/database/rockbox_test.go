@@ -9,18 +9,24 @@ import (
 func TestReadIndexEntries(t *testing.T) {
 	// This is a basic test structure for the readIndexEntries function
 	// In a real test, you would need to create a mock database file
-	
+
 	// Create a temporary test directory
-	tempDir, err := os.MkdirTemp("", "rockbox-test")
+	tempDir, err := os.MkdirTemp("", "dap-root-test")
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
 	}
 	defer os.RemoveAll(tempDir)
-	
+
+	// Create a rockbox directory
+	rockboxDir := filepath.Join(tempDir, ".rockbox")
+	if err := os.MkdirAll(rockboxDir, 0755); err != nil {
+		t.Fatalf("Failed to create .rockbox directory: %v", err)
+	}
+
 	// Create a mock index file - this would be filled with actual test data
 	// in a real test scenario
-	mockFile := filepath.Join(tempDir, "database_idx.tcd")
-	
+	mockFile := filepath.Join(rockboxDir, "database_idx.tcd")
+
 	// Try to read the non-existent file - should return an error
 	_, err = readIndexEntries(mockFile)
 	if err == nil {
@@ -41,21 +47,21 @@ func TestGetArtists(t *testing.T) {
 			},
 		},
 	}
-	
+
 	// Get artists
 	artists := db.GetArtists()
-	
+
 	// Check if we have the correct number of artists
 	if len(artists) != 2 {
 		t.Errorf("Expected 2 artists, got %d", len(artists))
 	}
-	
+
 	// Check if all artists are included
 	artistMap := make(map[string]bool)
 	for _, artist := range artists {
 		artistMap[artist] = true
 	}
-	
+
 	expectedArtists := []string{"Artist1", "Artist2"}
 	for _, artist := range expectedArtists {
 		if !artistMap[artist] {
@@ -77,28 +83,28 @@ func TestGetTracksForArtist(t *testing.T) {
 			},
 		},
 	}
-	
+
 	// Get tracks for Artist1
 	tracks := db.GetTracksForArtist("Artist1")
-	
+
 	// Check if we have the correct number of tracks
 	if len(tracks) != 2 {
 		t.Errorf("Expected 2 tracks for Artist1, got %d", len(tracks))
 	}
-	
+
 	// Get tracks for Artist2
 	tracks = db.GetTracksForArtist("Artist2")
-	
+
 	// Check if we have the correct number of tracks
 	if len(tracks) != 1 {
 		t.Errorf("Expected 1 track for Artist2, got %d", len(tracks))
 	}
-	
+
 	// Get tracks for non-existent artist
 	tracks = db.GetTracksForArtist("NonExistentArtist")
-	
+
 	// Check if we have the correct number of tracks
 	if len(tracks) != 0 {
 		t.Errorf("Expected 0 tracks for NonExistentArtist, got %d", len(tracks))
 	}
-} 
+}

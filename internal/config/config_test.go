@@ -22,15 +22,21 @@ func TestGetEnv(t *testing.T) {
 }
 
 func TestConfig_Validate(t *testing.T) {
-	// Create a temporary directory to simulate a Rockbox directory
-	tempDir, err := os.MkdirTemp("", "rockbox-test")
+	// Create a temporary directory to simulate a DAP root directory
+	tempDir, err := os.MkdirTemp("", "dap-root-test")
 	if err != nil {
 		t.Fatalf("Failed to create temporary directory: %v", err)
 	}
 	defer os.RemoveAll(tempDir)
 
+	// Create a mock .rockbox directory
+	rockboxDir := filepath.Join(tempDir, ".rockbox")
+	if err := os.MkdirAll(rockboxDir, 0755); err != nil {
+		t.Fatalf("Failed to create mock .rockbox directory: %v", err)
+	}
+
 	// Create a mock database file
-	dbFile := filepath.Join(tempDir, "database_idx.tcd")
+	dbFile := filepath.Join(rockboxDir, "database_idx.tcd")
 	if err := os.WriteFile(dbFile, []byte("mock data"), 0644); err != nil {
 		t.Fatalf("Failed to create mock database file: %v", err)
 	}
@@ -42,22 +48,22 @@ func TestConfig_Validate(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name: "Valid LastFM Config",
+			name: "Valid LastFM Config with DAP Root",
 			config: Config{
 				APISource:       "lastfm",
 				LastFMAPIKey:    "key",
 				LastFMAPISecret: "secret",
-				RockboxPath:     tempDir,
+				DapRootPath:     tempDir,
 			},
 			expectError: false,
 		},
 		{
-			name: "Valid Spotify Config",
+			name: "Valid Spotify Config with DAP Root",
 			config: Config{
-				APISource:          "spotify",
-				SpotifyClientID:    "id",
+				APISource:           "spotify",
+				SpotifyClientID:     "id",
 				SpotifyClientSecret: "secret",
-				RockboxPath:        tempDir,
+				DapRootPath:         tempDir,
 			},
 			expectError: false,
 		},
@@ -65,7 +71,7 @@ func TestConfig_Validate(t *testing.T) {
 			name: "Invalid API Source",
 			config: Config{
 				APISource:   "invalid",
-				RockboxPath: tempDir,
+				DapRootPath: tempDir,
 			},
 			expectError: true,
 		},
@@ -73,7 +79,7 @@ func TestConfig_Validate(t *testing.T) {
 			name: "Missing LastFM Credentials",
 			config: Config{
 				APISource:   "lastfm",
-				RockboxPath: tempDir,
+				DapRootPath: tempDir,
 			},
 			expectError: true,
 		},
@@ -81,27 +87,27 @@ func TestConfig_Validate(t *testing.T) {
 			name: "Missing Spotify Credentials",
 			config: Config{
 				APISource:   "spotify",
-				RockboxPath: tempDir,
+				DapRootPath: tempDir,
 			},
 			expectError: true,
 		},
 		{
-			name: "Empty Rockbox Path",
+			name: "Empty DAP Root Path",
 			config: Config{
 				APISource:       "lastfm",
 				LastFMAPIKey:    "key",
 				LastFMAPISecret: "secret",
-				RockboxPath:     "",
+				DapRootPath:     "",
 			},
 			expectError: true,
 		},
 		{
-			name: "Non-existent Rockbox Path",
+			name: "Non-existent DAP Root Path",
 			config: Config{
 				APISource:       "lastfm",
 				LastFMAPIKey:    "key",
 				LastFMAPISecret: "secret",
-				RockboxPath:     "/non/existent/path",
+				DapRootPath:     "/non/existent/path",
 			},
 			expectError: true,
 		},
@@ -115,4 +121,4 @@ func TestConfig_Validate(t *testing.T) {
 			}
 		})
 	}
-} 
+}

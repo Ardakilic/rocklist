@@ -24,7 +24,7 @@ func main() {
 	// Create API client
 	apiClient, err := api.NewAPIClient(
 		cfg.APISource,
-		cfg.LastFMAPIKey, 
+		cfg.LastFMAPIKey,
 		cfg.LastFMAPISecret,
 		cfg.SpotifyClientID,
 		cfg.SpotifyClientSecret,
@@ -33,8 +33,9 @@ func main() {
 		log.Fatalf("Error creating API client: %v", err)
 	}
 
-	// Load Rockbox database
-	db, err := database.LoadDatabase(cfg.RockboxPath)
+	// Load Rockbox database from .rockbox directory inside DAP root
+	rockboxDir := filepath.Join(cfg.DapRootPath, ".rockbox")
+	db, err := database.LoadDatabase(rockboxDir)
 	if err != nil {
 		log.Fatalf("Error loading Rockbox database: %v", err)
 	}
@@ -75,7 +76,7 @@ func main() {
 		wg.Add(1)
 		go func(artist string) {
 			defer wg.Done()
-			sem <- struct{}{} // Acquire semaphore
+			sem <- struct{}{}        // Acquire semaphore
 			defer func() { <-sem }() // Release semaphore
 
 			fmt.Printf("Processing artist: %s\n", artist)
@@ -107,8 +108,8 @@ func main() {
 		}
 	}
 
-	// Copy playlists to the Rockbox playlists directory if different
-	rockboxPlaylistDir := filepath.Join(cfg.RockboxPath, "playlists")
+	// Copy playlists to the Rockbox playlists directory if needed
+	rockboxPlaylistDir := filepath.Join(rockboxDir, "playlists")
 	if cfg.PlaylistPath != rockboxPlaylistDir {
 		fmt.Printf("\nCopying playlists to Rockbox playlists directory: %s\n", rockboxPlaylistDir)
 		if err := copyPlaylists(cfg.PlaylistPath, rockboxPlaylistDir); err != nil {
@@ -141,4 +142,4 @@ func copyPlaylists(src, dst string) error {
 	}
 
 	return nil
-} 
+}

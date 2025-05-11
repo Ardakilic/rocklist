@@ -67,9 +67,10 @@ type RockboxDB struct {
 }
 
 // LoadDatabase loads the Rockbox database from the given path
-func LoadDatabase(rockboxPath string) (*RockboxDB, error) {
+// rockboxDir should point to the .rockbox directory where database files are located
+func LoadDatabase(rockboxDir string) (*RockboxDB, error) {
 	// Read index file
-	idxEntries, err := readIndexEntries(filepath.Join(rockboxPath, "database_idx.tcd"))
+	idxEntries, err := readIndexEntries(filepath.Join(rockboxDir, "database_idx.tcd"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read index file: %w", err)
 	}
@@ -77,7 +78,7 @@ func LoadDatabase(rockboxPath string) (*RockboxDB, error) {
 	// Read tag files
 	tagMaps := make([]map[int32]string, TagCount)
 	for i := 0; i < TagCount; i++ {
-		tagFile := filepath.Join(rockboxPath, fmt.Sprintf("database_%d.tcd", i))
+		tagFile := filepath.Join(rockboxDir, fmt.Sprintf("database_%d.tcd", i))
 		tagMap, err := readTagFile(tagFile)
 		if err != nil {
 			// Skip missing tag files

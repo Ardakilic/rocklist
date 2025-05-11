@@ -30,8 +30,8 @@ WORKDIR /app
 COPY --from=builder /app/rocklist /app/rocklist
 
 
-# Define volume for rockbox data
-VOLUME /rockbox
+# Define volume for digital audio player root data
+VOLUME /dap_root
 
 # Set entrypoint
 ENTRYPOINT ["/app/rocklist"]
