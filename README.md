@@ -12,7 +12,7 @@ RockList is a Go CLI tool that automatically creates playlists for your Rockbox 
 
 ## Requirements
 
-- Go 1.24.3 (for development)
+- Go 1.24.4 (for development)
 - Docker (for containerized deployment)
 - Either one of these, to get top songs of an Artist:
   - Last.fm API credentials
