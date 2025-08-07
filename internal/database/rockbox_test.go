@@ -1,6 +1,7 @@
 package database
 
 import (
+	"encoding/binary"
 	"os"
 	"path/filepath"
 	"testing"
@@ -106,5 +107,189 @@ func TestGetTracksForArtist(t *testing.T) {
 	// Check if we have the correct number of tracks
 	if len(tracks) != 0 {
 		t.Errorf("Expected 0 tracks for NonExistentArtist, got %d", len(tracks))
+	}
+}
+
+// Helpers for building minimal valid tagcache files
+func writeSingleTagFile(t *testing.T, path string, data string, idxID int32) (int32, error) {
+	t.Helper()
+	f, err := os.Create(path)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+
+	// Tag file header
+	hdr := TagcacheHeader{Magic: TagcacheMagic, DataSize: 0, EntryCount: 1}
+	if err := binary.Write(f, binary.LittleEndian, hdr); err != nil {
+		return 0, err
+	}
+	// Entry header
+	tlen := int32(len(data) + 1) // include trailing NUL
+	if err := binary.Write(f, binary.LittleEndian, tlen); err != nil {
+		return 0, err
+	}
+	if err := binary.Write(f, binary.LittleEndian, idxID); err != nil {
+		return 0, err
+	}
+	// The offset the index stores is the data start position
+	// Current position after writing tlen and idxID
+	pos, err := f.Seek(0, 1)
+	if err != nil {
+		return 0, err
+	}
+	offset := int32(pos)
+
+	// Data with NUL terminator
+	if _, err := f.Write([]byte(data)); err != nil {
+		return 0, err
+	}
+	if _, err := f.Write([]byte{0}); err != nil {
+		return 0, err
+	}
+
+	return offset, nil
+}
+
+func writeIndexFile(t *testing.T, path string, entries []IndexEntry) error {
+	t.Helper()
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	type indexHeader struct {
+		Magic      int32
+		DataSize   int32
+		EntryCount int32
+		Serial     int32
+		CommitID   int32
+		Dirty      int32
+	}
+
+	// Each entry is 23*4 + 4 bytes
+	dataSize := int32(len(entries)) * (IndexFieldsBeforeFlags*4 + 4)
+	hdr := indexHeader{Magic: TagcacheMagic, DataSize: dataSize, EntryCount: int32(len(entries))}
+	if err := binary.Write(f, binary.LittleEndian, hdr); err != nil {
+		return err
+	}
+
+	for _, e := range entries {
+		for i := 0; i < IndexFieldsBeforeFlags; i++ {
+			if err := binary.Write(f, binary.LittleEndian, e.TagSeek[i]); err != nil {
+				return err
+			}
+		}
+		if err := binary.Write(f, binary.LittleEndian, e.Flag); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func TestLoadDatabase_WithValidMockData(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "rbdb-test")
+	if err != nil {
+		t.Fatalf("temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	rockboxDir := filepath.Join(tempDir, ".rockbox")
+	if err := os.MkdirAll(rockboxDir, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+
+	// Create tag files with a single entry each so data offset is predictable
+	// artist (0), album (1), title (3), filename (4)
+	artistOffset, err := writeSingleTagFile(t, filepath.Join(rockboxDir, "database_0.tcd"), "Artist X", 0)
+	if err != nil {
+		t.Fatalf("artist tag: %v", err)
+	}
+	albumOffset, err := writeSingleTagFile(t, filepath.Join(rockboxDir, "database_1.tcd"), "Album Y", 0)
+	if err != nil {
+		t.Fatalf("album tag: %v", err)
+	}
+	titleOffset, err := writeSingleTagFile(t, filepath.Join(rockboxDir, "database_3.tcd"), "Title Z", 0)
+	if err != nil {
+		t.Fatalf("title tag: %v", err)
+	}
+	fileOffset, err := writeSingleTagFile(t, filepath.Join(rockboxDir, "database_4.tcd"), "/music/a.mp3", 0)
+	if err != nil {
+		t.Fatalf("filename tag: %v", err)
+	}
+
+	// Build one valid entry and one DELETED entry
+	var valid IndexEntry
+	// zero-initialized TagSeek
+	valid.TagSeek[0] = artistOffset
+	valid.TagSeek[1] = albumOffset
+	valid.TagSeek[3] = titleOffset
+	valid.TagSeek[4] = fileOffset
+	valid.Flag = 0 // not deleted
+
+	var deleted IndexEntry
+	deleted.TagSeek[0] = artistOffset
+	deleted.TagSeek[1] = albumOffset
+	deleted.TagSeek[3] = titleOffset
+	deleted.TagSeek[4] = fileOffset
+	deleted.Flag = 1 // FLAG_DELETED
+
+	if err := writeIndexFile(t, filepath.Join(rockboxDir, "database_idx.tcd"), []IndexEntry{valid, deleted}); err != nil {
+		t.Fatalf("index file: %v", err)
+	}
+
+	db, err := LoadDatabase(rockboxDir)
+	if err != nil {
+		t.Fatalf("LoadDatabase error: %v", err)
+	}
+
+	if len(db.Tracks) != 1 {
+		t.Fatalf("expected 1 track (skip deleted), got %d", len(db.Tracks))
+	}
+	got := db.Tracks[0]
+	if got.Artist != "Artist X" || got.Album != "Album Y" || got.Title != "Title Z" || got.Filename != "/music/a.mp3" {
+		t.Fatalf("unexpected track: %#v", got)
+	}
+}
+
+func TestLoadDatabase_TrackWithoutFilenameExcluded(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "rbdb-test")
+	if err != nil {
+		t.Fatalf("temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	rockboxDir := filepath.Join(tempDir, ".rockbox")
+	if err := os.MkdirAll(rockboxDir, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+
+	// artist and title only; no filename tag file present
+	artistOffset, err := writeSingleTagFile(t, filepath.Join(rockboxDir, "database_0.tcd"), "Artist Only", 0)
+	if err != nil {
+		t.Fatalf("artist tag: %v", err)
+	}
+	titleOffset, err := writeSingleTagFile(t, filepath.Join(rockboxDir, "database_3.tcd"), "Title Only", 0)
+	if err != nil {
+		t.Fatalf("title tag: %v", err)
+	}
+
+	var entry IndexEntry
+	entry.TagSeek[0] = artistOffset
+	entry.TagSeek[3] = titleOffset
+	entry.Flag = 0
+
+	if err := writeIndexFile(t, filepath.Join(rockboxDir, "database_idx.tcd"), []IndexEntry{entry}); err != nil {
+		t.Fatalf("index file: %v", err)
+	}
+
+	db, err := LoadDatabase(rockboxDir)
+	if err != nil {
+		t.Fatalf("LoadDatabase error: %v", err)
+	}
+
+	if len(db.Tracks) != 0 {
+		t.Fatalf("expected 0 tracks when filename missing, got %d", len(db.Tracks))
 	}
 }
