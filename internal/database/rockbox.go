@@ -9,10 +9,15 @@ import (
 )
 
 const (
-	// TagCount is the number of tags in the Rockbox database
-	TagCount = 22
+	// IndexFieldsBeforeFlags is the number of 32-bit fields in an index entry that precede
+	// the flags field (indices 0..22). The flags field is stored separately after these.
+	IndexFieldsBeforeFlags = 23
 
-	// TagcacheMagic is the magic number for the Rockbox database
+	// TagCount is the total number of tag indices we may attempt to read tag files for.
+	// Rockbox defines tag files for 0..8 and 12 specifically. Others are numeric-only.
+	TagCount = 24
+
+	// TagcacheMagic is the magic/version for the Rockbox database (TCH\x10)
 	TagcacheMagic = 0x54434810
 
 	// ArtistTagIndex is the index of the artist tag in the Rockbox database
@@ -41,7 +46,7 @@ var tagNames = []string{
 
 // IndexEntry represents an entry in the Rockbox database index
 type IndexEntry struct {
-	TagSeek [TagCount]int32
+	TagSeek [IndexFieldsBeforeFlags]int32
 	Flag    int32
 }
 
@@ -75,7 +80,7 @@ func LoadDatabase(rockboxDir string) (*RockboxDB, error) {
 		return nil, fmt.Errorf("failed to read index file: %w", err)
 	}
 
-	// Read tag files
+	// Read tag files into maps keyed by byte offset of the start of the data portion in each tag file
 	tagMaps := make([]map[int32]string, TagCount)
 	for i := 0; i < TagCount; i++ {
 		tagFile := filepath.Join(rockboxDir, fmt.Sprintf("database_%d.tcd", i))
@@ -94,6 +99,10 @@ func LoadDatabase(rockboxDir string) (*RockboxDB, error) {
 	}
 
 	for _, entry := range idxEntries {
+		// Skip entries flagged as deleted
+		if entry.Flag&1 == 1 {
+			continue
+		}
 		var track Track
 
 		// Get artist
@@ -156,17 +165,45 @@ func readIndexEntries(path string) ([]IndexEntry, error) {
 	}
 	defer f.Close()
 
-	var hdr TagcacheHeader
+	// Read the full index header as defined by tagcache: Magic, DataSize, EntryCount,
+	// Serial, CommitID, Dirty. We only use the first three but need to consume all
+	// fields to position the file cursor correctly.
+	type indexHeader struct {
+		Magic      int32
+		DataSize   int32
+		EntryCount int32
+		Serial     int32
+		CommitID   int32
+		Dirty      int32
+	}
+
+	var hdr indexHeader
 	if err := binary.Read(f, binary.LittleEndian, &hdr); err != nil {
 		return nil, err
 	}
 	if hdr.Magic != TagcacheMagic {
 		return nil, fmt.Errorf("invalid magic: %x", hdr.Magic)
 	}
+	if hdr.EntryCount < 0 {
+		return nil, fmt.Errorf("invalid entry count: %d", hdr.EntryCount)
+	}
 
-	entries := make([]IndexEntry, hdr.EntryCount)
-	if err := binary.Read(f, binary.LittleEndian, &entries); err != nil {
-		return nil, err
+	// Each entry consists of IndexFieldsBeforeFlags int32 values in TagSeek and a Flag int32 at the end.
+	// We read them one by one to avoid struct padding issues.
+	entries := make([]IndexEntry, 0, hdr.EntryCount)
+	for i := 0; i < int(hdr.EntryCount); i++ {
+		var entry IndexEntry
+		// Read TagSeek
+		for j := 0; j < IndexFieldsBeforeFlags; j++ {
+			if err := binary.Read(f, binary.LittleEndian, &entry.TagSeek[j]); err != nil {
+				return nil, err
+			}
+		}
+		// Read Flag
+		if err := binary.Read(f, binary.LittleEndian, &entry.Flag); err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
 	}
 	return entries, nil
 }
@@ -179,6 +216,7 @@ func readTagFile(path string) (map[int32]string, error) {
 	}
 	defer f.Close()
 
+	// Tag file header is the same first three fields
 	var hdr TagcacheHeader
 	if err := binary.Read(f, binary.LittleEndian, &hdr); err != nil {
 		return nil, err
@@ -188,6 +226,9 @@ func readTagFile(path string) (map[int32]string, error) {
 	}
 
 	tagData := make(map[int32]string)
+	// After reading tlen and index id, record the current data start offset
+	// which is used in the index entries as the seek value for text tags.
+	// Except filenames (tag 4) are not padded; other tags are padded to 4 + 8*n.
 	for i := 0; i < int(hdr.EntryCount); i++ {
 		var tlen, idxID int32
 		if err := binary.Read(f, binary.LittleEndian, &tlen); err != nil {
@@ -197,11 +238,19 @@ func readTagFile(path string) (map[int32]string, error) {
 			break
 		}
 
+		// Record the absolute offset of the data portion
+		dataStart, _ := f.Seek(0, 1)
+
 		buf := make([]byte, tlen)
 		if _, err := f.Read(buf); err != nil {
 			break
 		}
-		tagData[idxID] = string(bytes.Trim(buf, "\x00"))
+
+		// Key by the byte offset within this tag file
+		tagData[int32(dataStart)] = string(bytes.Trim(buf, "\x00"))
+
+		// For padded tags, the file may have extra padding beyond tlen that we already consumed
+		// but Rockbox builds padding into tlen, so simply advancing by tlen bytes is enough here.
 	}
 	return tagData, nil
 }
