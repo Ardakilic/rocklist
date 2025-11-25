@@ -354,6 +354,7 @@ func TestMusicBrainzClient_GetSimilarArtists(t *testing.T) {
 	_, err := client.GetSimilarArtists(context.Background(), "Artist", 10)
 	if err != nil {
 		// Expected to potentially error or return empty/results
+		t.Logf("GetSimilarArtists returned error: %v", err)
 	}
 }
 

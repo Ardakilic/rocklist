@@ -114,7 +114,7 @@ func TestAppService_SaveConfig(t *testing.T) {
 	}
 
 	// This will fail because parser is nil, but tests the config save path
-	defer func() { recover() }()
+	defer func() { _ = recover() }()
 	_ = svc.SaveConfig(context.Background(), config)
 }
 

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"embed"
 	"os"
 	"testing"
@@ -158,49 +159,49 @@ func TestApp_MethodsBeforeStartup(t *testing.T) {
 	
 	// Test GetAppInfo panics
 	func() {
-		defer func() { recover() }()
+		defer func() { _ = recover() }()
 		_ = app.GetAppInfo()
 	}()
 
 	// Test GetConfig panics
 	func() {
-		defer func() { recover() }()
+		defer func() { _ = recover() }()
 		_ = app.GetConfig()
 	}()
 
 	// Test GetSongCount panics
 	func() {
-		defer func() { recover() }()
+		defer func() { _ = recover() }()
 		_ = app.GetSongCount()
 	}()
 
 	// Test GetUniqueArtists panics
 	func() {
-		defer func() { recover() }()
+		defer func() { _ = recover() }()
 		_ = app.GetUniqueArtists()
 	}()
 
 	// Test GetUniqueGenres panics
 	func() {
-		defer func() { recover() }()
+		defer func() { _ = recover() }()
 		_ = app.GetUniqueGenres()
 	}()
 
 	// Test GetAllPlaylists panics
 	func() {
-		defer func() { recover() }()
+		defer func() { _ = recover() }()
 		_ = app.GetAllPlaylists()
 	}()
 
 	// Test GetLogs panics
 	func() {
-		defer func() { recover() }()
+		defer func() { _ = recover() }()
 		_ = app.GetLogs()
 	}()
 
 	// Test GetEnabledSources panics
 	func() {
-		defer func() { recover() }()
+		defer func() { _ = recover() }()
 		_ = app.GetEnabledSources()
 	}()
 }
@@ -219,7 +220,7 @@ func TestApp_Shutdown_NilService(t *testing.T) {
 	app := NewApp()
 
 	// Should not panic even with nil service
-	app.shutdown(nil)
+	app.shutdown(context.TODO())
 }
 
 // mockExit captures exit codes for testing

@@ -48,6 +48,7 @@ func TestBaseClient_HTTPClient(t *testing.T) {
 	httpClient := client.HTTPClient()
 	if httpClient == nil {
 		t.Error("HTTPClient() returned nil")
+		return
 	}
 
 	if httpClient.Timeout == 0 {
