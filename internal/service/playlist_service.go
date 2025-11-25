@@ -188,9 +188,15 @@ func (s *PlaylistService) ExportPlaylist(ctx context.Context, playlistID uint) (
 	defer file.Close()
 
 	// Write M3U header
-	file.WriteString("#EXTM3U\n")
-	file.WriteString(fmt.Sprintf("#PLAYLIST:%s\n", playlist.Name))
-	file.WriteString("\n")
+	if _, err := file.WriteString("#EXTM3U\n"); err != nil {
+		return "", fmt.Errorf("failed to write playlist header: %w", err)
+	}
+	if _, err := file.WriteString(fmt.Sprintf("#PLAYLIST:%s\n", playlist.Name)); err != nil {
+		return "", fmt.Errorf("failed to write playlist name: %w", err)
+	}
+	if _, err := file.WriteString("\n"); err != nil {
+		return "", fmt.Errorf("failed to write playlist: %w", err)
+	}
 
 	// Write tracks
 	for _, song := range songs {
@@ -200,8 +206,12 @@ func (s *PlaylistService) ExportPlaylist(ctx context.Context, playlistID uint) (
 			duration = -1
 		}
 		displayName := song.GetDisplayName()
-		file.WriteString(fmt.Sprintf("#EXTINF:%d,%s\n", duration, displayName))
-		file.WriteString(song.Path + "\n")
+		if _, err := file.WriteString(fmt.Sprintf("#EXTINF:%d,%s\n", duration, displayName)); err != nil {
+			return "", fmt.Errorf("failed to write track info: %w", err)
+		}
+		if _, err := file.WriteString(song.Path + "\n"); err != nil {
+			return "", fmt.Errorf("failed to write track path: %w", err)
+		}
 	}
 
 	// Update playlist with export info

@@ -31,6 +31,34 @@ type SpotifyClient struct {
 	tokenExpiry  time.Time
 	mu           sync.RWMutex
 	logger       Logger
+	authURL      string // Allow override for testing
+	apiURL       string // Allow override for testing
+}
+
+// SetAuthURL sets a custom auth URL (for testing)
+func (c *SpotifyClient) SetAuthURL(url string) {
+	c.authURL = url
+}
+
+// SetAPIURL sets a custom API URL (for testing)
+func (c *SpotifyClient) SetAPIURL(url string) {
+	c.apiURL = url
+}
+
+// getAuthURL returns the auth URL to use
+func (c *SpotifyClient) getAuthURL() string {
+	if c.authURL != "" {
+		return c.authURL
+	}
+	return spotifyAuthURL
+}
+
+// getAPIURL returns the API URL to use
+func (c *SpotifyClient) getAPIURL() string {
+	if c.apiURL != "" {
+		return c.apiURL
+	}
+	return spotifyAPIURL
 }
 
 // NewSpotifyClient creates a new Spotify API client
@@ -83,7 +111,7 @@ func (c *SpotifyClient) getAccessToken(ctx context.Context) (string, error) {
 	data := url.Values{}
 	data.Set("grant_type", "client_credentials")
 
-	req, err := http.NewRequestWithContext(ctx, "POST", spotifyAuthURL, strings.NewReader(data.Encode()))
+	req, err := http.NewRequestWithContext(ctx, "POST", c.getAuthURL(), strings.NewReader(data.Encode()))
 	if err != nil {
 		return "", err
 	}
@@ -110,7 +138,9 @@ func (c *SpotifyClient) getAccessToken(ctx context.Context) (string, error) {
 	}
 
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
+	if _, err := buf.ReadFrom(resp.Body); err != nil {
+		return "", err
+	}
 	if err := json.Unmarshal(buf.Bytes(), &tokenResp); err != nil {
 		return "", err
 	}
@@ -128,7 +158,7 @@ func (c *SpotifyClient) makeRequest(ctx context.Context, endpoint string, params
 		return nil, err
 	}
 
-	u, err := url.Parse(spotifyAPIURL + endpoint)
+	u, err := url.Parse(c.getAPIURL() + endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +201,9 @@ func (c *SpotifyClient) makeRequest(ctx context.Context, endpoint string, params
 	}
 
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
+	if _, err := buf.ReadFrom(resp.Body); err != nil {
+		return nil, err
+	}
 	return buf.Bytes(), nil
 }
 

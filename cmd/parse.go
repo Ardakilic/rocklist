@@ -39,26 +39,30 @@ func runParse(usePrefetched bool) {
 	svc, err := service.NewAppService(dbPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: Failed to initialize service: %v\n", err)
-		os.Exit(1)
+		osExit(1)
+		return
 	}
 	defer svc.Close()
 
 	rockboxPath := viper.GetString("rockbox_path")
 	if rockboxPath == "" {
 		fmt.Fprintln(os.Stderr, "Error: --rockbox-path is required")
-		os.Exit(1)
+		osExit(1)
+		return
 	}
 
 	if err := svc.SetRockboxPath(rockboxPath); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: Failed to set Rockbox path: %v\n", err)
-		os.Exit(1)
+		osExit(1)
+		return
 	}
 
 	fmt.Printf("Parsing Rockbox database from: %s\n", rockboxPath)
 
 	if err := svc.ParseRockboxDatabase(ctx, usePrefetched); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: Failed to parse database: %v\n", err)
-		os.Exit(1)
+		osExit(1)
+		return
 	}
 
 	count, _ := svc.GetSongCount(ctx)

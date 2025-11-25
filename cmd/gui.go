@@ -41,7 +41,7 @@ func (a *App) startup(ctx context.Context) {
 
 	// Set Rockbox path if provided
 	if path := viper.GetString("rockbox_path"); path != "" {
-		a.service.SetRockboxPath(path)
+		_ = a.service.SetRockboxPath(path)
 	}
 }
 
@@ -212,7 +212,7 @@ func runGUI() {
 			},
 			About: &mac.AboutInfo{
 				Title:   "Rocklist",
-				Message: "Playlist generator for Rockbox devices\n\nAuthor: Arda Kılıçdağı\nEmail: arda@kilicdagi.com\n\nhttps://github.com/Ardakilic/rocklist",
+				Message: "Playlist generator for Rockbox devices\n\nAuthor: Arda Kılıçdağı\nEmail: arda@kilicdagi.com\n\nhttps://github.com/Ardakilic/Rocklist",
 			},
 		},
 		Windows: &windows.Options{
@@ -224,7 +224,8 @@ func runGUI() {
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		osExit(1)
+		return
 	}
 }
 

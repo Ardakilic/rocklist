@@ -59,11 +59,11 @@ func init() {
 	generateCmd.Flags().String("spotify-client-secret", "", "Spotify client secret")
 	generateCmd.Flags().String("musicbrainz-user-agent", "", "MusicBrainz user agent")
 
-	viper.BindPFlag("lastfm_api_key", generateCmd.Flags().Lookup("lastfm-api-key"))
-	viper.BindPFlag("lastfm_api_secret", generateCmd.Flags().Lookup("lastfm-api-secret"))
-	viper.BindPFlag("spotify_client_id", generateCmd.Flags().Lookup("spotify-client-id"))
-	viper.BindPFlag("spotify_client_secret", generateCmd.Flags().Lookup("spotify-client-secret"))
-	viper.BindPFlag("musicbrainz_user_agent", generateCmd.Flags().Lookup("musicbrainz-user-agent"))
+	_ = viper.BindPFlag("lastfm_api_key", generateCmd.Flags().Lookup("lastfm-api-key"))
+	_ = viper.BindPFlag("lastfm_api_secret", generateCmd.Flags().Lookup("lastfm-api-secret"))
+	_ = viper.BindPFlag("spotify_client_id", generateCmd.Flags().Lookup("spotify-client-id"))
+	_ = viper.BindPFlag("spotify_client_secret", generateCmd.Flags().Lookup("spotify-client-secret"))
+	_ = viper.BindPFlag("musicbrainz_user_agent", generateCmd.Flags().Lookup("musicbrainz-user-agent"))
 }
 
 func runGenerate(source, playlistType, artist, tag string, limit int) {
@@ -72,18 +72,21 @@ func runGenerate(source, playlistType, artist, tag string, limit int) {
 	// Validate inputs
 	if playlistType == "tag" && tag == "" {
 		fmt.Fprintln(os.Stderr, "Error: --tag is required for tag playlists")
-		os.Exit(1)
+		osExit(1)
+		return
 	}
 	if (playlistType == "top_songs" || playlistType == "mixed_songs" || playlistType == "similar") && artist == "" {
 		fmt.Fprintln(os.Stderr, "Error: --artist is required for this playlist type")
-		os.Exit(1)
+		osExit(1)
+		return
 	}
 
 	dbPath := viper.GetString("db_path")
 	svc, err := service.NewAppService(dbPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: Failed to initialize service: %v\n", err)
-		os.Exit(1)
+		osExit(1)
+		return
 	}
 	defer svc.Close()
 
@@ -91,11 +94,13 @@ func runGenerate(source, playlistType, artist, tag string, limit int) {
 	rockboxPath := viper.GetString("rockbox_path")
 	if rockboxPath == "" {
 		fmt.Fprintln(os.Stderr, "Error: --rockbox-path is required")
-		os.Exit(1)
+		osExit(1)
+		return
 	}
 	if err := svc.SetRockboxPath(rockboxPath); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: Failed to set Rockbox path: %v\n", err)
-		os.Exit(1)
+		osExit(1)
+		return
 	}
 
 	// Configure API credentials
@@ -124,7 +129,8 @@ func runGenerate(source, playlistType, artist, tag string, limit int) {
 	count, _ := svc.GetSongCount(ctx)
 	if count == 0 {
 		fmt.Fprintln(os.Stderr, "Error: No songs in database. Run 'rocklist parse' first.")
-		os.Exit(1)
+		osExit(1)
+		return
 	}
 
 	fmt.Printf("Found %d songs in database\n", count)
@@ -141,7 +147,8 @@ func runGenerate(source, playlistType, artist, tag string, limit int) {
 	playlist, err := svc.GeneratePlaylist(ctx, req)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: Failed to generate playlist: %v\n", err)
-		os.Exit(1)
+		osExit(1)
+		return
 	}
 
 	fmt.Printf("\nPlaylist generated successfully!\n")

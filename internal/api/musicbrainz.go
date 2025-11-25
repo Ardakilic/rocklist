@@ -29,12 +29,26 @@ type MusicBrainzClient struct {
 	lastRequest  time.Time
 	mu           sync.Mutex
 	logger       Logger
+	baseURL      string // Allow override for testing
+}
+
+// SetBaseURL sets a custom base URL (for testing)
+func (c *MusicBrainzClient) SetBaseURL(url string) {
+	c.baseURL = url
+}
+
+// getBaseURL returns the base URL to use
+func (c *MusicBrainzClient) getBaseURL() string {
+	if c.baseURL != "" {
+		return c.baseURL
+	}
+	return musicBrainzAPIURL
 }
 
 // NewMusicBrainzClient creates a new MusicBrainz API client
 func NewMusicBrainzClient(userAgent string, logger Logger) *MusicBrainzClient {
 	if userAgent == "" {
-		userAgent = "Rocklist/1.0.0 ( https://github.com/Ardakilic/rocklist )"
+		userAgent = "Rocklist/1.0.0 ( https://github.com/Ardakilic/Rocklist )"
 	}
 	return &MusicBrainzClient{
 		BaseClient: NewBaseClient(models.DataSourceMusicBrainz, userAgent),
@@ -71,7 +85,7 @@ func (c *MusicBrainzClient) rateLimitWait() {
 func (c *MusicBrainzClient) makeRequest(ctx context.Context, endpoint string, params map[string]string) ([]byte, error) {
 	c.rateLimitWait()
 
-	u, err := url.Parse(musicBrainzAPIURL + endpoint)
+	u, err := url.Parse(c.getBaseURL() + endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +122,9 @@ func (c *MusicBrainzClient) makeRequest(ctx context.Context, endpoint string, pa
 	}
 
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
+	if _, err := buf.ReadFrom(resp.Body); err != nil {
+		return nil, err
+	}
 	return buf.Bytes(), nil
 }
 

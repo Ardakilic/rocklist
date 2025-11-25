@@ -13,6 +13,8 @@ import (
 var (
 	cfgFile string
 	assets  embed.FS
+	// osExit is a variable for os.Exit to allow testing
+	osExit = os.Exit
 )
 
 // SetAssets sets the embedded frontend assets
@@ -59,8 +61,8 @@ func init() {
 	rootCmd.PersistentFlags().String("rockbox-path", "", "Path to Rockbox device root")
 	rootCmd.PersistentFlags().String("db-path", "", "Path to database file")
 
-	viper.BindPFlag("rockbox_path", rootCmd.PersistentFlags().Lookup("rockbox-path"))
-	viper.BindPFlag("db_path", rootCmd.PersistentFlags().Lookup("db-path"))
+	_ = viper.BindPFlag("rockbox_path", rootCmd.PersistentFlags().Lookup("rockbox-path"))
+	_ = viper.BindPFlag("db_path", rootCmd.PersistentFlags().Lookup("db-path"))
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -71,11 +73,12 @@ func initConfig() {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			osExit(1)
+			return
 		}
 
 		configDir := home + "/.rocklist"
-		os.MkdirAll(configDir, 0755)
+		_ = os.MkdirAll(configDir, 0755)
 
 		viper.AddConfigPath(configDir)
 		viper.SetConfigType("yaml")

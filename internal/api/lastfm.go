@@ -23,6 +23,20 @@ type LastFMClient struct {
 	apiKey    string
 	apiSecret string
 	logger    Logger
+	baseURL   string // Allow override for testing
+}
+
+// SetBaseURL sets a custom base URL (for testing)
+func (c *LastFMClient) SetBaseURL(url string) {
+	c.baseURL = url
+}
+
+// getBaseURL returns the base URL to use
+func (c *LastFMClient) getBaseURL() string {
+	if c.baseURL != "" {
+		return c.baseURL
+	}
+	return lastFMBaseURL
 }
 
 // NewLastFMClient creates a new Last.fm API client
@@ -52,7 +66,7 @@ func (c *LastFMClient) makeRequest(ctx context.Context, method string, params ma
 		return nil, models.ErrAPIKeyMissing
 	}
 
-	u, err := url.Parse(lastFMBaseURL)
+	u, err := url.Parse(c.getBaseURL())
 	if err != nil {
 		return nil, err
 	}

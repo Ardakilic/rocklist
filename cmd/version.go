@@ -22,7 +22,7 @@ var versionCmd = &cobra.Command{
 		fmt.Printf("  Git Commit: %s\n", GitCommit)
 		fmt.Printf("  Build Date: %s\n", BuildDate)
 		fmt.Printf("\nAuthor: Arda Kılıçdağı <arda@kilicdagi.com>\n")
-		fmt.Printf("Repository: https://github.com/Ardakilic/rocklist\n")
+		fmt.Printf("Repository: https://github.com/Ardakilic/Rocklist\n")
 		fmt.Printf("License: MIT\n")
 	},
 }
