@@ -43,13 +43,13 @@ Download the latest release for your platform from the [Releases page](https://g
 
 #### Prerequisites
 
-- Go 1.21 or later
+- Go 1.23 or later
 - Node.js 18 or later
 - [Wails CLI](https://wails.io/docs/gettingstarted/installation)
 
 **Linux dependencies:**
 ```bash
-sudo apt-get install libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev
+sudo apt-get install libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
 ```
 
 **Build:**

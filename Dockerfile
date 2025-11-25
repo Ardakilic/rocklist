@@ -10,7 +10,7 @@ FROM golang:1.23-bookworm AS base
 RUN apt-get update && apt-get install -y \
     build-essential \
     libgtk-3-dev \
-    libwebkit2gtk-4.0-dev \
+    libwebkit2gtk-4.1-dev \
     libayatana-appindicator3-dev \
     npm \
     nodejs \
