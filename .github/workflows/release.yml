@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,6 +16,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+            echo "version=dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -30,7 +41,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev
           go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
       - name: Build frontend
@@ -40,7 +51,7 @@ jobs:
           npm run build
 
       - name: Build Linux amd64
-        run: wails build -platform linux/amd64 -ldflags "-X github.com/Ardakilic/rocklist/cmd.Version=${{ github.ref_name }}"
+        run: wails build -platform linux/amd64 -ldflags "-X github.com/Ardakilic/rocklist/cmd.Version=${{ steps.version.outputs.version }}"
 
       - name: Package Linux
         run: |
@@ -59,6 +70,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+            echo "version=dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -81,7 +103,7 @@ jobs:
           npm run build
 
       - name: Build Windows
-        run: wails build -platform windows/amd64 -ldflags "-X github.com/Ardakilic/rocklist/cmd.Version=${{ github.ref_name }}"
+        run: wails build -platform windows/amd64 -ldflags "-X github.com/Ardakilic/rocklist/cmd.Version=${{ steps.version.outputs.version }}"
 
       - name: Package Windows
         run: |
@@ -100,6 +122,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+            echo "version=dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -136,7 +168,7 @@ jobs:
           rm certificate.p12
 
       - name: Build macOS Universal
-        run: wails build -platform darwin/universal -ldflags "-X github.com/Ardakilic/rocklist/cmd.Version=${{ github.ref_name }}"
+        run: wails build -platform darwin/universal -ldflags "-X github.com/Ardakilic/rocklist/cmd.Version=${{ steps.version.outputs.version }}"
 
       - name: Code Sign macOS App
         if: env.APPLE_DEVELOPER_ID != ''
@@ -186,6 +218,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "is_dev=false" >> $GITHUB_OUTPUT
+          else
+            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+            echo "version=dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+            echo "is_dev=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -194,9 +238,10 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          name: Rocklist ${{ github.ref_name }}
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Rocklist ${{ steps.version.outputs.version }}
           body: |
-            ## Rocklist ${{ github.ref_name }}
+            ## Rocklist ${{ steps.version.outputs.version }}
             
             ### Downloads
             
@@ -216,12 +261,12 @@ jobs:
             
             ### What's New
             
-            See [CHANGELOG.md](https://github.com/Ardakilic/rocklist/blob/main/CHANGELOG.md) for details.
+            See [CHANGELOG.md](https://github.com/Ardakilic/Rocklist/blob/main/CHANGELOG.md) for details.
           files: |
             artifacts/rocklist-linux-amd64/rocklist-linux-amd64.tar.gz
             artifacts/rocklist-windows-amd64/rocklist-windows-amd64.zip
             artifacts/rocklist-macos-universal/rocklist-macos-universal.dmg
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.version.outputs.is_dev == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
