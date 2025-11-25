@@ -30,3 +30,34 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Build output
+build/
+dist/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Wails
+wails.json.bak
+
+# Database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+*.app
+
+# Config (user-specific)
+.rocklist/
+
+# Docker cache directories
+.cache/

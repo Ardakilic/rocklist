@@ -1,0 +1,58 @@
+services:
+  # Development environment
+  dev:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+      - ./.cache/go-mod:/go/pkg/mod
+      - ./frontend/node_modules:/app/frontend/node_modules
+    environment:
+      - ROCKLIST_DEBUG=true
+      - GOFLAGS=-mod=mod
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    command: bash
+
+  # Build service for cross-platform builds
+  build:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+      - ./.cache/go-mod:/go/pkg/mod
+      - ./frontend/node_modules:/app/frontend/node_modules
+      - ./build:/app/build
+    environment:
+      - GOFLAGS=-mod=mod
+    working_dir: /app
+
+  # Run tests
+  test:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+      - ./.cache/go-mod:/go/pkg/mod
+    environment:
+      - GOFLAGS=-mod=mod
+    working_dir: /app
+    command: go test -v -race -coverprofile=coverage.out ./...
+
+  # Lint service
+  lint:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+      - ./.cache/go-mod:/go/pkg/mod
+      - ./frontend/node_modules:/app/frontend/node_modules
+    environment:
+      - GOFLAGS=-mod=mod
+    working_dir: /app
+    command: golangci-lint run ./...
