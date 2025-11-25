@@ -77,10 +77,10 @@ const ToastDescription = React.forwardRef<
 ))
 ToastDescription.displayName = ToastPrimitives.Description.displayName
 
-type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>
+export type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>
 
 function Toaster() {
-  const [toasts, setToasts] = React.useState<{ id: string; title: string; description?: string }[]>([])
+  const [toasts] = React.useState<{ id: string; title: string; description?: string }[]>([])
 
   return (
     <ToastProvider>

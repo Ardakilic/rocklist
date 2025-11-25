@@ -1,7 +1,7 @@
 # Rocklist Makefile
 # Author: Arda Kılıçdağı <arda@kilicdagi.com>
 
-.PHONY: help setup build build-linux build-windows build-darwin build-all dev test test-coverage lint clean clean-all install frontend-install frontend-build shell docker-build docker-rebuild deps update-deps generate version
+.PHONY: help setup build build-linux build-windows build-darwin build-all dev test test-coverage test-quick lint lint-go lint-frontend fmt clean clean-all install frontend-install frontend-build shell docker-build docker-rebuild deps update-deps generate version pre-commit-install pre-commit
 
 # Variables
 APP_NAME := rocklist
@@ -81,6 +81,10 @@ test: ## Run tests
 	@echo "$(GREEN)Running tests...$(NC)"
 	$(DC) run --rm test
 
+test-quick: ## Run tests quickly (no race detection, for pre-commit)
+	@echo "$(GREEN)Running quick tests...$(NC)"
+	$(DC) run --rm dev go test -short ./...
+
 test-coverage: ## Run tests with coverage
 	@echo "$(GREEN)Running tests with coverage...$(NC)"
 	$(DC) run --rm dev go test -v -coverprofile=coverage.out -covermode=atomic ./...
@@ -98,11 +102,31 @@ test-coverage-check: test-coverage ## Check if coverage is above 90%
 	fi'
 
 # Linting
-lint: ## Run linters
-	@echo "$(GREEN)Running linters...$(NC)"
+lint: lint-go lint-frontend ## Run all linters
+
+lint-go: ## Run Go linter only
+	@echo "$(GREEN)Running Go linter...$(NC)"
 	$(DC) run --rm lint
+
+lint-frontend: ## Run frontend linter only
 	@echo "$(GREEN)Running frontend linter...$(NC)"
 	$(DC) run --rm dev sh -c "cd frontend && npm run lint"
+
+# Formatting
+fmt: ## Format Go code
+	@echo "$(GREEN)Formatting Go code...$(NC)"
+	$(DC) run --rm dev go fmt ./...
+
+# Pre-commit
+pre-commit-install: ## Install pre-commit hooks
+	@echo "$(GREEN)Installing pre-commit hooks...$(NC)"
+	@command -v pre-commit >/dev/null 2>&1 || { echo "$(YELLOW)Installing pre-commit...$(NC)"; pip install pre-commit; }
+	pre-commit install
+	@echo "$(GREEN)Pre-commit hooks installed!$(NC)"
+
+pre-commit: ## Run pre-commit on all files
+	@echo "$(GREEN)Running pre-commit checks...$(NC)"
+	pre-commit run --all-files
 
 # Setup
 setup: ## Create required directories for caching

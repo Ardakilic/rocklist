@@ -181,13 +181,43 @@ make build-windows     # Build for Windows
 make build-darwin      # Build for macOS
 make build-all         # Build for all platforms
 make test              # Run tests
+make test-quick        # Run quick tests (for pre-commit)
 make test-coverage     # Run tests with coverage report
-make lint              # Run linters
+make lint              # Run all linters
+make lint-go           # Run Go linter only
+make lint-frontend     # Run frontend linter only
+make fmt               # Format Go code
 make clean             # Clean build artifacts
 make clean-all         # Clean everything including caches
 make shell             # Open bash shell in Docker
 make docker-build      # Build Docker image
+make pre-commit-install # Install pre-commit hooks
+make pre-commit        # Run pre-commit on all files
 ```
+
+### Pre-commit Hooks
+
+This project uses [pre-commit](https://pre-commit.com/) for automated code quality checks before commits.
+
+```bash
+# Install pre-commit (requires Python)
+pip install pre-commit
+
+# Install the git hooks
+make pre-commit-install
+
+# Run manually on all files
+make pre-commit
+```
+
+The following checks run automatically on each commit:
+- **Go formatting** - `go fmt`
+- **Go imports** - organize imports
+- **Go mod tidy** - clean up go.mod
+- **Go lint** - via golangci-lint
+- **Go tests** - quick test run
+- **Frontend lint** - ESLint for TypeScript/React
+- **General** - trailing whitespace, YAML/JSON validation, large files
 
 ### Running Tests
 

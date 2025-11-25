@@ -1,0 +1,53 @@
+# Pre-commit hooks for Rocklist
+# Install: pip install pre-commit && pre-commit install
+# Or use: make pre-commit-install
+
+repos:
+  # Go formatting and imports
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt
+      - id: go-imports
+      - id: go-mod-tidy
+
+  # Local hooks using Makefile commands
+  - repo: local
+    hooks:
+      # Go linting via Docker
+      - id: go-lint
+        name: Go Lint
+        entry: make lint-go
+        language: system
+        pass_filenames: false
+        types: [go]
+
+      # Go tests via Docker
+      - id: go-test
+        name: Go Test
+        entry: make test-quick
+        language: system
+        pass_filenames: false
+        types: [go]
+
+      # Frontend linting
+      - id: frontend-lint
+        name: Frontend Lint
+        entry: make lint-frontend
+        language: system
+        pass_filenames: false
+        types_or: [ts, tsx, javascript, jsx]
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^frontend/dist/
+      - id: end-of-file-fixer
+        exclude: ^frontend/dist/
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1000']

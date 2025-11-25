@@ -11,7 +11,7 @@ export function FetchTab() {
   const [usePrefetched, setUsePrefetched] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [logs, setLogs] = useState<LogEntry[]>([])
-  const [parseStatus, setParseStatus] = useState<ParseStatus | null>(null)
+  const [_parseStatus, _setParseStatus] = useState<ParseStatus | null>(null)
   const [lastParsedAt, setLastParsedAt] = useState<string | null>(null)
   const [songCount, setSongCount] = useState(0)
 

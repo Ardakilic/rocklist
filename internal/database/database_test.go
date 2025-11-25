@@ -3,6 +3,7 @@ package database
 import (
 	"testing"
 
+	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
@@ -97,12 +98,12 @@ func TestDatabase_Transaction(t *testing.T) {
 		t.Fatalf("Migrate() error = %v", err)
 	}
 	
-	err = db.Transaction(func(tx interface{}) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		return nil
 	})
-	
-	// Note: The Transaction method expects *gorm.DB, so this test is simplified
-	// In practice, you'd test with proper gorm.DB transactions
+	if err != nil {
+		t.Errorf("Transaction() error = %v", err)
+	}
 }
 
 func TestDatabase_Close(t *testing.T) {
