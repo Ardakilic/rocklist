@@ -11,7 +11,6 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libgtk-3-dev \
     libwebkit2gtk-4.1-dev \
-    libayatana-appindicator3-dev \
     npm \
     nodejs \
     git \
@@ -60,7 +59,7 @@ RUN go mod download
 RUN cd frontend && npm install
 
 # Build the application
-RUN wails build -platform linux/amd64
+RUN wails build -platform linux/amd64 -tags webkit2_41
 
 # =============================================================================
 # Stage 4: Production image (minimal)
@@ -70,8 +69,7 @@ FROM debian:bookworm-slim AS production
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     libgtk-3-0 \
-    libwebkit2gtk-4.0-37 \
-    libayatana-appindicator3-1 \
+    libwebkit2gtk-4.1-0 \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
