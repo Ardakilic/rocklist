@@ -14,6 +14,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App is the main Wails application
@@ -72,6 +73,13 @@ func (a *App) SaveConfig(config map[string]interface{}) error {
 // SetRockboxPath sets the Rockbox device path
 func (a *App) SetRockboxPath(path string) error {
 	return a.service.SetRockboxPath(path)
+}
+
+// SelectDirectory opens a directory picker dialog and returns the selected path
+func (a *App) SelectDirectory() (string, error) {
+	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Select Rockbox Device",
+	})
 }
 
 // SetLastFMCredentials sets Last.fm API credentials
@@ -228,4 +236,3 @@ func runGUI() {
 		return
 	}
 }
-

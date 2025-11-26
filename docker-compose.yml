@@ -14,6 +14,9 @@ services:
     working_dir: /app
     stdin_open: true
     tty: true
+    ports:
+      - "34115:34115"
+      - "5173:5173"
     command: bash
 
   # Build service for cross-platform builds

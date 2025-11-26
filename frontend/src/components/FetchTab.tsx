@@ -50,6 +50,19 @@ export function FetchTab() {
     }
   }
 
+  const handleBrowseFolder = async () => {
+    if (!window.go?.cmd?.App) return
+    
+    try {
+      const selectedPath = await window.go.cmd.App.SelectDirectory()
+      if (selectedPath) {
+        setRockboxPath(selectedPath)
+      }
+    } catch (error) {
+      console.error('Failed to open directory dialog:', error)
+    }
+  }
+
   const handleParse = async () => {
     if (!window.go?.cmd?.App) return
     
@@ -97,7 +110,7 @@ export function FetchTab() {
                 onChange={(e) => setRockboxPath(e.target.value)}
                 className="flex-1"
               />
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" onClick={handleBrowseFolder}>
                 <FolderOpen className="h-4 w-4" />
               </Button>
             </div>
