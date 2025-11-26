@@ -25,11 +25,11 @@ const (
 // MusicBrainzClient is a client for the MusicBrainz API
 type MusicBrainzClient struct {
 	*BaseClient
-	userAgent    string
-	lastRequest  time.Time
-	mu           sync.Mutex
-	logger       Logger
-	baseURL      string // Allow override for testing
+	userAgent   string
+	lastRequest time.Time
+	mu          sync.Mutex
+	logger      Logger
+	baseURL     string // Allow override for testing
 }
 
 // SetBaseURL sets a custom base URL (for testing)
@@ -112,7 +112,7 @@ func (c *MusicBrainzClient) makeRequest(ctx context.Context, endpoint string, pa
 	if err != nil {
 		return nil, models.NewAPIError(models.DataSourceMusicBrainz, 0, "request failed", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == 429 || resp.StatusCode == 503 {
 		return nil, models.NewAPIError(models.DataSourceMusicBrainz, resp.StatusCode, "rate limited", models.ErrAPIRateLimited)
@@ -131,7 +131,7 @@ func (c *MusicBrainzClient) makeRequest(ctx context.Context, endpoint string, pa
 // SearchTrack searches for a track by artist and title
 func (c *MusicBrainzClient) SearchTrack(ctx context.Context, artist, title string) (*TrackMatch, error) {
 	query := fmt.Sprintf("recording:\"%s\" AND artist:\"%s\"", escapeQuery(title), escapeQuery(artist))
-	
+
 	data, err := c.makeRequest(ctx, "/recording", map[string]string{
 		"query": query,
 		"limit": "1",
@@ -216,7 +216,7 @@ func (c *MusicBrainzClient) GetTopTracks(ctx context.Context, artist string, lim
 func (c *MusicBrainzClient) GetSimilarTracks(ctx context.Context, artist, title string, limit int) ([]*TrackInfo, error) {
 	// MusicBrainz doesn't have a direct similar tracks feature
 	// We can try to find tracks from similar artists or same album
-	
+
 	// First, find the recording
 	match, err := c.SearchTrack(ctx, artist, title)
 	if err != nil {

@@ -58,7 +58,7 @@ func TestNewAppService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAppService() error = %v", err)
 	}
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	if svc == nil {
 		t.Fatal("NewAppService() returned nil")
@@ -71,7 +71,7 @@ func TestNewAppService_EmptyPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAppService() error = %v", err)
 	}
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	if svc == nil {
 		t.Fatal("NewAppService() returned nil")
@@ -336,7 +336,7 @@ func TestAppService_GetParseStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAppService() error = %v", err)
 	}
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	status := svc.GetParseStatus()
 	if status == nil {

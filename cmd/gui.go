@@ -49,7 +49,7 @@ func (a *App) startup(ctx context.Context) {
 // shutdown is called when the app is closing
 func (a *App) shutdown(ctx context.Context) {
 	if a.service != nil {
-		a.service.Close()
+		_ = a.service.Close()
 	}
 }
 

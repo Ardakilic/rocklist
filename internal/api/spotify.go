@@ -125,7 +125,7 @@ func (c *SpotifyClient) getAccessToken(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", models.NewAPIError(models.DataSourceSpotify, 0, "auth request failed", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		return "", models.NewAPIError(models.DataSourceSpotify, resp.StatusCode, "auth failed", models.ErrAPIUnauthorized)
@@ -210,7 +210,7 @@ func (c *SpotifyClient) makeRequest(ctx context.Context, endpoint string, params
 // SearchTrack searches for a track by artist and title
 func (c *SpotifyClient) SearchTrack(ctx context.Context, artist, title string) (*TrackMatch, error) {
 	query := fmt.Sprintf("artist:%s track:%s", artist, title)
-	
+
 	data, err := c.makeRequest(ctx, "/search", map[string]string{
 		"q":     query,
 		"type":  "track",

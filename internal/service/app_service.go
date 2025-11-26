@@ -237,7 +237,7 @@ func (s *AppService) loadConfig(ctx context.Context) error {
 func (s *AppService) updateClients() {
 	s.lastfmClient.SetCredentials(s.config.LastFM.APIKey, s.config.LastFM.APISecret)
 	s.spotifyClient.SetCredentials(s.config.Spotify.ClientID, s.config.Spotify.ClientSecret)
-	
+
 	userAgent := s.config.MusicBrainz.UserAgent
 	if userAgent == "" {
 		userAgent = "Rocklist/1.0.0 ( https://github.com/Ardakilic/rocklist )"
@@ -448,7 +448,7 @@ func (s *AppService) DeletePlaylist(ctx context.Context, id uint) error {
 
 	// Delete exported file if exists
 	if playlist.FilePath != "" {
-		os.Remove(playlist.FilePath)
+		_ = os.Remove(playlist.FilePath)
 	}
 
 	return s.playlistRepo.Delete(ctx, id)

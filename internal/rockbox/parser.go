@@ -73,9 +73,15 @@ type Logger interface {
 // DefaultLogger provides a simple console logger
 type DefaultLogger struct{}
 
-func (l *DefaultLogger) Info(msg string, args ...interface{})  { fmt.Printf("[INFO] "+msg+"\n", args...) }
-func (l *DefaultLogger) Error(msg string, args ...interface{}) { fmt.Printf("[ERROR] "+msg+"\n", args...) }
-func (l *DefaultLogger) Debug(msg string, args ...interface{}) { fmt.Printf("[DEBUG] "+msg+"\n", args...) }
+func (l *DefaultLogger) Info(msg string, args ...interface{}) {
+	fmt.Printf("[INFO] "+msg+"\n", args...)
+}
+func (l *DefaultLogger) Error(msg string, args ...interface{}) {
+	fmt.Printf("[ERROR] "+msg+"\n", args...)
+}
+func (l *DefaultLogger) Debug(msg string, args ...interface{}) {
+	fmt.Printf("[DEBUG] "+msg+"\n", args...)
+}
 
 // NewParser creates a new Rockbox database parser
 func NewParser(rockboxPath string, logger Logger) *Parser {
@@ -180,7 +186,7 @@ func (p *Parser) Parse(ctx context.Context) ([]*models.Song, error) {
 // parseDatabase reads and parses the Rockbox TagCache database files
 func (p *Parser) parseDatabase(ctx context.Context) ([]*models.Song, error) {
 	rockboxDir := filepath.Join(p.rockboxPath, TagCacheDir)
-	
+
 	// Read all tag cache files
 	entries, err := p.readTagCacheEntries(ctx, rockboxDir)
 	if err != nil {
@@ -195,12 +201,12 @@ func (p *Parser) parseDatabase(ctx context.Context) ([]*models.Song, error) {
 // readTagCacheEntries reads entries from TagCache files
 func (p *Parser) readTagCacheEntries(ctx context.Context, rockboxDir string) ([]*models.Song, error) {
 	dbPath := filepath.Join(rockboxDir, DatabaseFile)
-	
+
 	file, err := os.Open(dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Read header
 	header := make([]byte, 12)
@@ -260,7 +266,7 @@ func (p *Parser) readTagCacheEntries(ctx context.Context, rockboxDir string) ([]
 		}
 
 		song := &models.Song{}
-		
+
 		// Get string tags
 		if artists, ok := tagData[0]; ok {
 			if artist, ok := artists[i]; ok {
@@ -343,7 +349,7 @@ func (p *Parser) readTagFile(path string) (map[int]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Read header
 	header := make([]byte, 12)
@@ -360,7 +366,7 @@ func (p *Parser) readTagFile(path string) (map[int]string, error) {
 	entryCount := binary.LittleEndian.Uint32(header[8:12])
 
 	result := make(map[int]string, entryCount)
-	
+
 	// Read string data
 	data := make([]byte, dataSize)
 	if _, err := io.ReadFull(file, data); err != nil {
@@ -388,11 +394,11 @@ func (p *Parser) readTagFile(path string) (map[int]string, error) {
 // readNumericTags reads numeric tags from the index file
 func (p *Parser) readNumericTags(file *os.File, entryCount int) (map[int]*NumericTagData, error) {
 	result := make(map[int]*NumericTagData, entryCount)
-	
+
 	// Skip to numeric data section (after header)
 	// Each entry has fixed-size numeric fields
 	entrySize := 32 // Approximate size per entry
-	
+
 	for i := 0; i < entryCount; i++ {
 		data := make([]byte, entrySize)
 		n, err := file.Read(data)
@@ -423,7 +429,7 @@ func (p *Parser) readNumericTags(file *os.File, entryCount int) (map[int]*Numeri
 // scanFilesystem scans the filesystem for audio files
 func (p *Parser) scanFilesystem(ctx context.Context) ([]*models.Song, error) {
 	p.logger.Info("Scanning filesystem for audio files...")
-	
+
 	var songs []*models.Song
 	audioExts := map[string]bool{
 		".mp3":  true,

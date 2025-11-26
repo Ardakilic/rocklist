@@ -156,7 +156,7 @@ func TestApp_MethodsBeforeStartup(t *testing.T) {
 
 	// These methods access service which is nil before startup
 	// They should panic when called before startup
-	
+
 	// Test GetAppInfo panics
 	func() {
 		defer func() { _ = recover() }()
@@ -340,8 +340,8 @@ func TestInitConfig_WithConfigFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	_ = tmpFile.Close()
 
 	// Set cfgFile
 	originalCfgFile := cfgFile

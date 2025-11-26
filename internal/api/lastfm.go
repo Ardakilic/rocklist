@@ -94,7 +94,7 @@ func (c *LastFMClient) makeRequest(ctx context.Context, method string, params ma
 	if err != nil {
 		return nil, models.NewAPIError(models.DataSourceLastFM, 0, "request failed", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == 429 {
 		return nil, models.NewAPIError(models.DataSourceLastFM, 429, "rate limited", models.ErrAPIRateLimited)
@@ -146,7 +146,7 @@ func (c *LastFMClient) SearchTrack(ctx context.Context, artist, title string) (*
 	}
 
 	track := result.Results.TrackMatches.Track[0]
-	
+
 	// Calculate confidence based on string similarity
 	confidence := calculateConfidence(artist, track.Artist, title, track.Name)
 

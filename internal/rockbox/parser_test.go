@@ -147,7 +147,7 @@ func TestParser_Parse_InProgress(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(rockboxDir, DatabaseFile), []byte("test"), 0644)
 
 	parser := NewParser(tmpDir, nil)
-	
+
 	// Simulate in-progress state
 	parser.status.InProgress = true
 
@@ -270,22 +270,22 @@ func TestNumericTagData_Fields(t *testing.T) {
 
 func TestParser_ScanFilesystem(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Create some audio files
 	musicDir := filepath.Join(tmpDir, "Music")
 	_ = os.MkdirAll(musicDir, 0755)
-	
+
 	testFiles := []string{
 		"Artist - Song.mp3",
 		"Another Artist - Another Song.flac",
 		"Simple Title.ogg",
 		"not_audio.txt",
 	}
-	
+
 	for _, f := range testFiles {
 		_ = os.WriteFile(filepath.Join(musicDir, f), []byte("test"), 0644)
 	}
-	
+
 	// Create hidden dir that should be skipped
 	hiddenDir := filepath.Join(tmpDir, ".hidden")
 	_ = os.MkdirAll(hiddenDir, 0755)
@@ -293,7 +293,7 @@ func TestParser_ScanFilesystem(t *testing.T) {
 
 	logger := &mockLogger{}
 	parser := NewParser(tmpDir, logger)
-	
+
 	songs, err := parser.scanFilesystem(context.Background())
 	if err != nil {
 		t.Fatalf("scanFilesystem() error = %v", err)
@@ -322,7 +322,7 @@ func TestParser_ScanFilesystem_Cancelled(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(musicDir, "test.mp3"), []byte("test"), 0644)
 
 	parser := NewParser(tmpDir, nil)
-	
+
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
 
@@ -335,7 +335,7 @@ func TestParser_ScanFilesystem_Cancelled(t *testing.T) {
 
 func TestParser_ReadTagFile_NotFound(t *testing.T) {
 	parser := NewParser("/test", nil)
-	
+
 	_, err := parser.readTagFile("/nonexistent/file.tcd")
 	if err == nil {
 		t.Error("readTagFile() should return error for nonexistent file")
@@ -345,7 +345,7 @@ func TestParser_ReadTagFile_NotFound(t *testing.T) {
 func TestParser_ReadTagFile_InvalidMagic(t *testing.T) {
 	tmpDir := t.TempDir()
 	tagFile := filepath.Join(tmpDir, "test.tcd")
-	
+
 	// Write file with invalid magic
 	data := make([]byte, 12)
 	binary.LittleEndian.PutUint32(data[0:4], 0x12345678) // Invalid magic
@@ -353,7 +353,7 @@ func TestParser_ReadTagFile_InvalidMagic(t *testing.T) {
 
 	parser := NewParser(tmpDir, nil)
 	_, err := parser.readTagFile(tagFile)
-	
+
 	if err == nil {
 		t.Error("readTagFile() should return error for invalid magic")
 	}
@@ -362,21 +362,21 @@ func TestParser_ReadTagFile_InvalidMagic(t *testing.T) {
 func TestParser_ReadTagFile_Valid(t *testing.T) {
 	tmpDir := t.TempDir()
 	tagFile := filepath.Join(tmpDir, "test.tcd")
-	
+
 	// Create valid tag file
 	header := make([]byte, 12)
 	binary.LittleEndian.PutUint32(header[0:4], TagCacheMagic)
 	binary.LittleEndian.PutUint32(header[4:8], 12) // data size
 	binary.LittleEndian.PutUint32(header[8:12], 2) // entry count
-	
+
 	data := []byte("test1\x00test2\x00")
-	
+
 	fullData := append(header, data...)
 	_ = os.WriteFile(tagFile, fullData, 0644)
 
 	parser := NewParser(tmpDir, nil)
 	result, err := parser.readTagFile(tagFile)
-	
+
 	if err != nil {
 		t.Fatalf("readTagFile() error = %v", err)
 	}
@@ -393,27 +393,27 @@ func TestParser_ReadTagFile_Valid(t *testing.T) {
 func TestParser_ReadNumericTags(t *testing.T) {
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "numeric.tcd")
-	
+
 	// Create file with numeric data
 	data := make([]byte, 64) // 2 entries
-	
+
 	// Entry 0
-	binary.LittleEndian.PutUint16(data[0:2], 2024)   // Year
+	binary.LittleEndian.PutUint16(data[0:2], 2024)    // Year
 	data[2] = 1                                       // DiscNumber
 	data[3] = 5                                       // TrackNumber
-	binary.LittleEndian.PutUint16(data[4:6], 320)    // Bitrate
+	binary.LittleEndian.PutUint16(data[4:6], 320)     // Bitrate
 	binary.LittleEndian.PutUint32(data[6:10], 240000) // Length
-	binary.LittleEndian.PutUint32(data[10:14], 10)   // PlayCount
+	binary.LittleEndian.PutUint32(data[10:14], 10)    // PlayCount
 	data[14] = 5                                      // Rating
-	
+
 	_ = os.WriteFile(testFile, data, 0644)
-	
+
 	file, _ := os.Open(testFile)
-	defer file.Close()
-	
+	defer func() { _ = file.Close() }()
+
 	parser := NewParser(tmpDir, nil)
 	result, err := parser.readNumericTags(file, 2)
-	
+
 	if err != nil {
 		t.Fatalf("readNumericTags() error = %v", err)
 	}
@@ -430,11 +430,11 @@ func TestParser_ParseWithFilesystemFallback(t *testing.T) {
 	tmpDir := t.TempDir()
 	rockboxDir := filepath.Join(tmpDir, TagCacheDir)
 	_ = os.MkdirAll(rockboxDir, 0755)
-	
+
 	// Create invalid database file to trigger fallback
 	dbFile := filepath.Join(rockboxDir, DatabaseFile)
 	_ = os.WriteFile(dbFile, []byte("invalid"), 0644)
-	
+
 	// Create some audio files
 	musicDir := filepath.Join(tmpDir, "Music")
 	_ = os.MkdirAll(musicDir, 0755)
@@ -442,7 +442,7 @@ func TestParser_ParseWithFilesystemFallback(t *testing.T) {
 
 	logger := &mockLogger{}
 	parser := NewParser(tmpDir, logger)
-	
+
 	songs, err := parser.Parse(context.Background())
 	if err != nil {
 		t.Fatalf("Parse() error = %v", err)
