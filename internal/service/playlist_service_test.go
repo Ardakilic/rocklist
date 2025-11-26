@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/Ardakilic/rocklist/internal/api"
 	"github.com/Ardakilic/rocklist/internal/models"
+	"gorm.io/gorm"
 )
 
 // mockSongRepository implements repository.SongRepository for testing
@@ -547,6 +549,410 @@ func TestMatchStats_MatchRate(t *testing.T) {
 			rate := stats.MatchRate()
 			if rate != tt.expected {
 				t.Errorf("MatchStats.MatchRate() = %v, want %v", rate, tt.expected)
+			}
+		})
+	}
+}
+
+func TestPlaylistService_GeneratePlaylist_TopSongs_Success(t *testing.T) {
+	songs := []*models.Song{
+		{Model: gorm.Model{ID: 1}, Artist: "Metallica", Title: "Enter Sandman", Path: "/music/metallica/sandman.mp3"},
+		{Model: gorm.Model{ID: 2}, Artist: "Metallica", Title: "Master of Puppets", Path: "/music/metallica/mop.mp3"},
+	}
+	songRepo := &mockSongRepository{songs: songs}
+	playlistRepo := &mockPlaylistRepository{}
+	logger := &mockServiceLogger{}
+
+	svc := NewPlaylistService(songRepo, playlistRepo, "/playlists", logger)
+
+	client := &mockAPIClient{
+		source:     models.DataSourceLastFM,
+		configured: true,
+		topTracks: []*api.TrackInfo{
+			{Artist: "Metallica", Title: "Enter Sandman"},
+			{Artist: "Metallica", Title: "Master of Puppets"},
+		},
+	}
+	svc.RegisterClient(models.DataSourceLastFM, client)
+
+	req := &models.PlaylistRequest{
+		DataSource: models.DataSourceLastFM,
+		Type:       models.PlaylistTypeTopSongs,
+		Artist:     "Metallica",
+		Limit:      10,
+	}
+
+	playlist, err := svc.GeneratePlaylist(context.Background(), req)
+	if err != nil {
+		t.Fatalf("GeneratePlaylist() error = %v", err)
+	}
+	if playlist == nil {
+		t.Fatal("GeneratePlaylist() returned nil playlist")
+	}
+	if playlist.Name == "" {
+		t.Error("GeneratePlaylist() playlist name is empty")
+	}
+}
+
+func TestPlaylistService_GeneratePlaylist_TagPlaylist_Success(t *testing.T) {
+	songs := []*models.Song{
+		{Model: gorm.Model{ID: 1}, Artist: "Metallica", Title: "Enter Sandman", Path: "/music/metallica/sandman.mp3"},
+	}
+	songRepo := &mockSongRepository{songs: songs}
+	playlistRepo := &mockPlaylistRepository{}
+	logger := &mockServiceLogger{}
+
+	svc := NewPlaylistService(songRepo, playlistRepo, "/playlists", logger)
+
+	client := &mockAPIClient{
+		source:     models.DataSourceLastFM,
+		configured: true,
+		topTracks: []*api.TrackInfo{
+			{Artist: "Metallica", Title: "Enter Sandman"},
+		},
+	}
+	svc.RegisterClient(models.DataSourceLastFM, client)
+
+	req := &models.PlaylistRequest{
+		DataSource: models.DataSourceLastFM,
+		Type:       models.PlaylistTypeTag,
+		Tag:        "metal",
+		Limit:      10,
+	}
+
+	playlist, err := svc.GeneratePlaylist(context.Background(), req)
+	if err != nil {
+		t.Fatalf("GeneratePlaylist() error = %v", err)
+	}
+	if playlist == nil {
+		t.Fatal("GeneratePlaylist() returned nil playlist")
+	}
+}
+
+func TestPlaylistService_GeneratePlaylist_NoMatchingSongs(t *testing.T) {
+	// Empty songs list - no matches possible
+	songRepo := &mockSongRepository{songs: []*models.Song{}}
+	playlistRepo := &mockPlaylistRepository{}
+	logger := &mockServiceLogger{}
+
+	svc := NewPlaylistService(songRepo, playlistRepo, "/playlists", logger)
+
+	client := &mockAPIClient{
+		source:     models.DataSourceLastFM,
+		configured: true,
+		topTracks: []*api.TrackInfo{
+			{Artist: "Unknown Artist", Title: "Unknown Song"},
+		},
+	}
+	svc.RegisterClient(models.DataSourceLastFM, client)
+
+	req := &models.PlaylistRequest{
+		DataSource: models.DataSourceLastFM,
+		Type:       models.PlaylistTypeTopSongs,
+		Artist:     "Unknown Artist",
+		Limit:      10,
+	}
+
+	_, err := svc.GeneratePlaylist(context.Background(), req)
+	if err != models.ErrNoMatchingSongs {
+		t.Errorf("GeneratePlaylist() error = %v, want ErrNoMatchingSongs", err)
+	}
+}
+
+func TestPlaylistService_GeneratePlaylist_NoTracksFromAPI(t *testing.T) {
+	songRepo := &mockSongRepository{songs: []*models.Song{}}
+	playlistRepo := &mockPlaylistRepository{}
+	logger := &mockServiceLogger{}
+
+	svc := NewPlaylistService(songRepo, playlistRepo, "/playlists", logger)
+
+	// Client returns empty tracks
+	client := &mockAPIClient{
+		source:     models.DataSourceLastFM,
+		configured: true,
+		topTracks:  []*api.TrackInfo{}, // Empty
+	}
+	svc.RegisterClient(models.DataSourceLastFM, client)
+
+	req := &models.PlaylistRequest{
+		DataSource: models.DataSourceLastFM,
+		Type:       models.PlaylistTypeTopSongs,
+		Artist:     "Some Artist",
+		Limit:      10,
+	}
+
+	_, err := svc.GeneratePlaylist(context.Background(), req)
+	if err != models.ErrNoMatchingSongs {
+		t.Errorf("GeneratePlaylist() error = %v, want ErrNoMatchingSongs", err)
+	}
+}
+
+func TestPlaylistService_GeneratePlaylist_MixedSongs_Success(t *testing.T) {
+	songs := []*models.Song{
+		{Model: gorm.Model{ID: 1}, Artist: "Metallica", Title: "Enter Sandman", Path: "/music/metallica/sandman.mp3"},
+	}
+	songRepo := &mockSongRepository{songs: songs}
+	playlistRepo := &mockPlaylistRepository{}
+	logger := &mockServiceLogger{}
+
+	svc := NewPlaylistService(songRepo, playlistRepo, "/playlists", logger)
+
+	client := &mockAPIClient{
+		source:     models.DataSourceLastFM,
+		configured: true,
+		topTracks: []*api.TrackInfo{
+			{Artist: "Metallica", Title: "Enter Sandman"},
+		},
+	}
+	svc.RegisterClient(models.DataSourceLastFM, client)
+
+	req := &models.PlaylistRequest{
+		DataSource: models.DataSourceLastFM,
+		Type:       models.PlaylistTypeMixedSongs,
+		Artist:     "Metallica",
+		Limit:      10,
+	}
+
+	playlist, err := svc.GeneratePlaylist(context.Background(), req)
+	if err != nil {
+		t.Fatalf("GeneratePlaylist() error = %v", err)
+	}
+	if playlist == nil {
+		t.Fatal("GeneratePlaylist() returned nil playlist")
+	}
+}
+
+func TestPlaylistService_GeneratePlaylist_Similar_Success(t *testing.T) {
+	songs := []*models.Song{
+		{Model: gorm.Model{ID: 1}, Artist: "Megadeth", Title: "Peace Sells", Path: "/music/megadeth/peace.mp3"},
+	}
+	songRepo := &mockSongRepository{songs: songs}
+	playlistRepo := &mockPlaylistRepository{}
+	logger := &mockServiceLogger{}
+
+	svc := NewPlaylistService(songRepo, playlistRepo, "/playlists", logger)
+
+	client := &mockAPIClientWithSimilar{
+		mockAPIClient: mockAPIClient{
+			source:     models.DataSourceLastFM,
+			configured: true,
+		},
+		similarArtists: []*api.ArtistInfo{
+			{Name: "Megadeth"},
+		},
+		topTracks: []*api.TrackInfo{
+			{Artist: "Megadeth", Title: "Peace Sells"},
+		},
+	}
+	svc.RegisterClient(models.DataSourceLastFM, client)
+
+	req := &models.PlaylistRequest{
+		DataSource: models.DataSourceLastFM,
+		Type:       models.PlaylistTypeSimilar,
+		Artist:     "Metallica",
+		Limit:      10,
+	}
+
+	playlist, err := svc.GeneratePlaylist(context.Background(), req)
+	if err != nil {
+		t.Fatalf("GeneratePlaylist() error = %v", err)
+	}
+	if playlist == nil {
+		t.Fatal("GeneratePlaylist() returned nil playlist")
+	}
+}
+
+// mockAPIClientWithSimilar extends mockAPIClient with similar artists support
+type mockAPIClientWithSimilar struct {
+	mockAPIClient
+	similarArtists []*api.ArtistInfo
+	topTracks      []*api.TrackInfo
+}
+
+func (m *mockAPIClientWithSimilar) GetSimilarArtists(ctx context.Context, artist string, limit int) ([]*api.ArtistInfo, error) {
+	return m.similarArtists, nil
+}
+
+func (m *mockAPIClientWithSimilar) GetTopTracks(ctx context.Context, artist string, limit int) ([]*api.TrackInfo, error) {
+	return m.topTracks, nil
+}
+
+func TestPlaylistService_GeneratePlaylist_InvalidType(t *testing.T) {
+	songRepo := &mockSongRepository{}
+	playlistRepo := &mockPlaylistRepository{}
+	logger := &mockServiceLogger{}
+
+	svc := NewPlaylistService(songRepo, playlistRepo, "/playlists", logger)
+
+	client := &mockAPIClient{
+		source:     models.DataSourceLastFM,
+		configured: true,
+	}
+	svc.RegisterClient(models.DataSourceLastFM, client)
+
+	req := &models.PlaylistRequest{
+		DataSource: models.DataSourceLastFM,
+		Type:       models.PlaylistType("invalid_type"),
+		Limit:      10,
+	}
+
+	_, err := svc.GeneratePlaylist(context.Background(), req)
+	if err == nil {
+		t.Error("GeneratePlaylist() should return error for invalid playlist type")
+	}
+}
+
+func TestPlaylistService_ExportPlaylist(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	songs := []*models.Song{
+		{Model: gorm.Model{ID: 1}, Artist: "Metallica", Title: "Enter Sandman", Path: "/music/metallica/sandman.mp3", Duration: 330},
+	}
+
+	playlistRepo := &mockPlaylistRepositoryWithExport{
+		playlist: &models.Playlist{
+			Model: gorm.Model{ID: 1},
+			Name:  "Test Playlist",
+		},
+		songs: songs,
+	}
+	songRepo := &mockSongRepository{songs: songs}
+	logger := &mockServiceLogger{}
+
+	svc := NewPlaylistService(songRepo, playlistRepo, tmpDir, logger)
+
+	filepath, err := svc.ExportPlaylist(context.Background(), 1)
+	if err != nil {
+		t.Fatalf("ExportPlaylist() error = %v", err)
+	}
+	if filepath == "" {
+		t.Error("ExportPlaylist() returned empty filepath")
+	}
+
+	// Check file exists
+	if _, err := os.Stat(filepath); os.IsNotExist(err) {
+		t.Errorf("ExportPlaylist() file does not exist: %s", filepath)
+	}
+}
+
+// mockPlaylistRepositoryWithExport is a mock for ExportPlaylist testing
+type mockPlaylistRepositoryWithExport struct {
+	mockPlaylistRepository
+	playlist *models.Playlist
+	songs    []*models.Song
+}
+
+func (m *mockPlaylistRepositoryWithExport) FindByID(ctx context.Context, id uint) (*models.Playlist, error) {
+	return m.playlist, nil
+}
+
+func (m *mockPlaylistRepositoryWithExport) GetSongs(ctx context.Context, playlistID uint) ([]*models.Song, error) {
+	return m.songs, nil
+}
+
+func TestPlaylistService_ExportPlaylist_NoSongs(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	playlistRepo := &mockPlaylistRepositoryWithExport{
+		playlist: &models.Playlist{
+			Model: gorm.Model{ID: 1},
+			Name:  "Empty Playlist",
+		},
+		songs: []*models.Song{}, // Empty songs
+	}
+	songRepo := &mockSongRepository{}
+	logger := &mockServiceLogger{}
+
+	svc := NewPlaylistService(songRepo, playlistRepo, tmpDir, logger)
+
+	_, err := svc.ExportPlaylist(context.Background(), 1)
+	if err != models.ErrNoMatchingSongs {
+		t.Errorf("ExportPlaylist() error = %v, want ErrNoMatchingSongs", err)
+	}
+}
+
+func TestNormalizeString_Extended(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"Hello World", "hello world"},
+		{"Song (Remastered)", "song"},
+		{"Song (Remaster)", "song"},
+		{"Song [Remastered]", "song"},
+		{"Song - Remastered", "song"},
+		{"Song (Live)", "song"},
+		{"Song [Live]", "song"},
+		{"  spaces  ", "spaces"},
+		{"UPPERCASE", "uppercase"},
+		{"Already lowercase", "already lowercase"},
+		{"Song (Remastered) (Live)", "song (remastered)"}, // Removes last (Live) suffix
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := normalizeString(tt.input)
+			if result != tt.want {
+				t.Errorf("normalizeString(%q) = %q, want %q", tt.input, result, tt.want)
+			}
+		})
+	}
+}
+
+func TestStringSimilarity_Extended(t *testing.T) {
+	tests := []struct {
+		name string
+		a    string
+		b    string
+		min  float64
+		max  float64
+	}{
+		{"identical lowercase", "hello", "hello", 1.0, 1.0},
+		{"identical uppercase", "HELLO", "HELLO", 1.0, 1.0},
+		{"mixed case identical", "Hello", "hello", 1.0, 1.0},
+		{"empty first", "", "hello", 0.0, 0.1},
+		{"empty second", "hello", "", 0.0, 0.1},
+		{"both empty", "", "", 1.0, 1.0}, // Two empty strings are identical
+		{"substring match", "hello world", "hello", 0.4, 0.6},
+		{"reverse substring", "hello", "hello world", 0.4, 0.6},
+		{"similar words", "test", "tset", 0.4, 0.6},
+		{"completely different", "abc", "xyz", 0.0, 0.4},
+		{"one char diff", "test", "text", 0.6, 0.8},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := stringSimilarity(tt.a, tt.b)
+			if result < tt.min || result > tt.max {
+				t.Errorf("stringSimilarity(%q, %q) = %v, want between %v and %v", tt.a, tt.b, result, tt.min, tt.max)
+			}
+		})
+	}
+}
+
+func TestLevenshteinDistance_Extended(t *testing.T) {
+	tests := []struct {
+		a    string
+		b    string
+		want int
+	}{
+		{"", "", 0},
+		{"a", "", 1},
+		{"", "a", 1},
+		{"abc", "abc", 0},
+		{"abc", "ab", 1},
+		{"abc", "abd", 1},
+		{"abc", "xyz", 3},
+		{"kitten", "sitting", 3},
+		{"saturday", "sunday", 3},
+		{"flaw", "lawn", 2},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.a+"_"+tt.b, func(t *testing.T) {
+			result := levenshteinDistance(tt.a, tt.b)
+			if result != tt.want {
+				t.Errorf("levenshteinDistance(%q, %q) = %d, want %d", tt.a, tt.b, result, tt.want)
 			}
 		})
 	}

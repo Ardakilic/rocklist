@@ -4,7 +4,7 @@
 # =============================================================================
 # Stage 1: Base image with all build tools
 # =============================================================================
-FROM golang:1.23-bookworm AS base
+FROM golang:1.25-bookworm AS base
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
