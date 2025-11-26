@@ -42,7 +42,7 @@ func runParse(usePrefetched bool) {
 		osExit(1)
 		return
 	}
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	rockboxPath := viper.GetString("rockbox_path")
 	if rockboxPath == "" {

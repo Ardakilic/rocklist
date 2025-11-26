@@ -184,7 +184,7 @@ func (c *SpotifyClient) makeRequest(ctx context.Context, endpoint string, params
 	if err != nil {
 		return nil, models.NewAPIError(models.DataSourceSpotify, 0, "request failed", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == 429 {
 		return nil, models.NewAPIError(models.DataSourceSpotify, 429, "rate limited", models.ErrAPIRateLimited)

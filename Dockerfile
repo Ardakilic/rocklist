@@ -28,8 +28,8 @@ WORKDIR /app
 # =============================================================================
 FROM base AS development
 
-# Install additional development tools
-RUN go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+# Install additional development tools (use v2 to match CI)
+RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 
 # Copy go mod files first for better caching
 COPY go.mod ./

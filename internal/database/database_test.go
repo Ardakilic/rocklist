@@ -37,7 +37,7 @@ func TestNew_InMemory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if db.DB() == nil {
 		t.Error("New() returned nil DB")
@@ -92,7 +92,7 @@ func TestDatabase_Transaction(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err := db.Migrate(); err != nil {
 		t.Fatalf("Migrate() error = %v", err)
@@ -127,7 +127,7 @@ func TestNew_WithNilConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New(nil) error = %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if db.DB() == nil {
 		t.Error("New(nil) returned nil DB")
@@ -146,7 +146,7 @@ func TestNew_WithFilePath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if db.DB() == nil {
 		t.Error("New() returned nil DB")
@@ -181,7 +181,7 @@ func TestDatabase_DB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	gormDB := db.DB()
 	if gormDB == nil {

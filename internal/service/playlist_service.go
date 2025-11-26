@@ -185,7 +185,7 @@ func (s *PlaylistService) ExportPlaylist(ctx context.Context, playlistID uint) (
 	if err != nil {
 		return "", fmt.Errorf("failed to create playlist file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Write M3U header
 	if _, err := file.WriteString("#EXTM3U\n"); err != nil {

@@ -30,7 +30,7 @@ func setupConfigTestDB(t *testing.T) *database.Database {
 
 func TestConfigRepository_Set(t *testing.T) {
 	db := setupConfigTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewConfigRepository(db.DB())
 	ctx := context.Background()
@@ -43,7 +43,7 @@ func TestConfigRepository_Set(t *testing.T) {
 
 func TestConfigRepository_Get(t *testing.T) {
 	db := setupConfigTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewConfigRepository(db.DB())
 	ctx := context.Background()
@@ -62,7 +62,7 @@ func TestConfigRepository_Get(t *testing.T) {
 
 func TestConfigRepository_Get_NotFound(t *testing.T) {
 	db := setupConfigTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewConfigRepository(db.DB())
 	ctx := context.Background()
@@ -75,7 +75,7 @@ func TestConfigRepository_Get_NotFound(t *testing.T) {
 
 func TestConfigRepository_Set_Upsert(t *testing.T) {
 	db := setupConfigTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewConfigRepository(db.DB())
 	ctx := context.Background()
@@ -91,7 +91,7 @@ func TestConfigRepository_Set_Upsert(t *testing.T) {
 
 func TestConfigRepository_Delete(t *testing.T) {
 	db := setupConfigTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewConfigRepository(db.DB())
 	ctx := context.Background()
@@ -111,7 +111,7 @@ func TestConfigRepository_Delete(t *testing.T) {
 
 func TestConfigRepository_Delete_NotFound(t *testing.T) {
 	db := setupConfigTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewConfigRepository(db.DB())
 	ctx := context.Background()
@@ -124,7 +124,7 @@ func TestConfigRepository_Delete_NotFound(t *testing.T) {
 
 func TestConfigRepository_GetAll(t *testing.T) {
 	db := setupConfigTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewConfigRepository(db.DB())
 	ctx := context.Background()
@@ -149,7 +149,7 @@ func TestConfigRepository_GetAll(t *testing.T) {
 
 func TestConfigRepository_GetAll_Empty(t *testing.T) {
 	db := setupConfigTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewConfigRepository(db.DB())
 	ctx := context.Background()
@@ -166,7 +166,7 @@ func TestConfigRepository_GetAll_Empty(t *testing.T) {
 
 func TestConfigRepository_GetLastParsedAt(t *testing.T) {
 	db := setupConfigTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewConfigRepository(db.DB())
 	ctx := context.Background()
@@ -190,7 +190,7 @@ func TestConfigRepository_GetLastParsedAt(t *testing.T) {
 
 func TestConfigRepository_GetLastParsedAt_NotSet(t *testing.T) {
 	db := setupConfigTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewConfigRepository(db.DB())
 	ctx := context.Background()
@@ -207,7 +207,7 @@ func TestConfigRepository_GetLastParsedAt_NotSet(t *testing.T) {
 
 func TestConfigRepository_SetLastParsedAt(t *testing.T) {
 	db := setupConfigTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewConfigRepository(db.DB())
 	ctx := context.Background()

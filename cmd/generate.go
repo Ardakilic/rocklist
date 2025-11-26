@@ -88,7 +88,7 @@ func runGenerate(source, playlistType, artist, tag string, limit int) {
 		osExit(1)
 		return
 	}
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	// Set Rockbox path
 	rockboxPath := viper.GetString("rockbox_path")

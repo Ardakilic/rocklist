@@ -80,7 +80,7 @@ func TestNewAppService_EmptyPath(t *testing.T) {
 
 func TestAppService_GetConfig(t *testing.T) {
 	db, svc := setupTestAppService(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	config := svc.GetConfig()
 	if config == nil {
@@ -90,7 +90,7 @@ func TestAppService_GetConfig(t *testing.T) {
 
 func TestAppService_SaveConfig(t *testing.T) {
 	db, svc := setupTestAppService(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Need to set up parser
 	svc.parser = nil // Will be nil but we're testing SaveConfig's repo operations
@@ -120,7 +120,7 @@ func TestAppService_SaveConfig(t *testing.T) {
 
 func TestAppService_GetSongCount(t *testing.T) {
 	db, svc := setupTestAppService(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	ctx := context.Background()
 
@@ -145,7 +145,7 @@ func TestAppService_GetSongCount(t *testing.T) {
 
 func TestAppService_GetUniqueArtists(t *testing.T) {
 	db, svc := setupTestAppService(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	ctx := context.Background()
 
@@ -165,7 +165,7 @@ func TestAppService_GetUniqueArtists(t *testing.T) {
 
 func TestAppService_GetUniqueGenres(t *testing.T) {
 	db, svc := setupTestAppService(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	ctx := context.Background()
 
@@ -185,7 +185,7 @@ func TestAppService_GetUniqueGenres(t *testing.T) {
 
 func TestAppService_GetAllPlaylists(t *testing.T) {
 	db, svc := setupTestAppService(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	ctx := context.Background()
 
@@ -205,7 +205,7 @@ func TestAppService_GetAllPlaylists(t *testing.T) {
 
 func TestAppService_GetPlaylist(t *testing.T) {
 	db, svc := setupTestAppService(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	ctx := context.Background()
 
@@ -224,7 +224,7 @@ func TestAppService_GetPlaylist(t *testing.T) {
 
 func TestAppService_DeletePlaylist(t *testing.T) {
 	db, svc := setupTestAppService(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	ctx := context.Background()
 
@@ -245,7 +245,7 @@ func TestAppService_DeletePlaylist(t *testing.T) {
 
 func TestAppService_GetLogs(t *testing.T) {
 	db, svc := setupTestAppService(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Add some logs
 	svc.logBuffer.Add("info", "Test log 1")
@@ -263,7 +263,7 @@ func TestAppService_GetLogs(t *testing.T) {
 
 func TestAppService_ClearLogs(t *testing.T) {
 	db, svc := setupTestAppService(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	svc.logBuffer.Add("info", "Test log")
 	svc.ClearLogs()
@@ -276,7 +276,7 @@ func TestAppService_ClearLogs(t *testing.T) {
 
 func TestAppService_GetEnabledSources(t *testing.T) {
 	db, svc := setupTestAppService(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// No sources enabled by default
 	sources := svc.GetEnabledSources()
@@ -308,7 +308,7 @@ func TestAppService_GetEnabledSources(t *testing.T) {
 
 func TestAppService_WipeData(t *testing.T) {
 	db, svc := setupTestAppService(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	ctx := context.Background()
 
@@ -346,7 +346,7 @@ func TestAppService_GetParseStatus(t *testing.T) {
 
 func TestAppService_GetLastParsedAt(t *testing.T) {
 	db, svc := setupTestAppService(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	ctx := context.Background()
 
@@ -369,7 +369,7 @@ func TestAppService_GetAppInfo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAppService() error = %v", err)
 	}
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	info := svc.GetAppInfo()
 	if info == nil {
@@ -391,7 +391,7 @@ func TestAppService_Close(t *testing.T) {
 	}
 
 	// Should not panic
-	svc.Close()
+	_ = svc.Close()
 }
 
 func TestAppService_SetRockboxPath(t *testing.T) {
@@ -402,7 +402,7 @@ func TestAppService_SetRockboxPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAppService() error = %v", err)
 	}
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	rockboxPath := tmpDir + "/rockbox"
 	err = svc.SetRockboxPath(rockboxPath)
@@ -424,7 +424,7 @@ func TestAppService_GeneratePlaylist_NoClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAppService() error = %v", err)
 	}
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	ctx := context.Background()
 
@@ -443,7 +443,7 @@ func TestAppService_GeneratePlaylist_NoClient(t *testing.T) {
 
 func TestAppService_GetAllSongs(t *testing.T) {
 	db, svc := setupTestAppService(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	ctx := context.Background()
 
@@ -468,7 +468,7 @@ func TestAppService_ExportLogsToFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAppService() error = %v", err)
 	}
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	// Add some logs
 	svc.logBuffer.Add("info", "Test log 1")

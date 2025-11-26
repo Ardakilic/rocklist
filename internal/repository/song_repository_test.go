@@ -29,7 +29,7 @@ func setupTestDB(t *testing.T) *database.Database {
 
 func TestSongRepository_Create(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -53,7 +53,7 @@ func TestSongRepository_Create(t *testing.T) {
 
 func TestSongRepository_FindByID(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -80,7 +80,7 @@ func TestSongRepository_FindByID(t *testing.T) {
 
 func TestSongRepository_FindByID_NotFound(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -93,7 +93,7 @@ func TestSongRepository_FindByID_NotFound(t *testing.T) {
 
 func TestSongRepository_FindByRockboxID(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -117,7 +117,7 @@ func TestSongRepository_FindByRockboxID(t *testing.T) {
 
 func TestSongRepository_FindByArtist(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -139,7 +139,7 @@ func TestSongRepository_FindByArtist(t *testing.T) {
 
 func TestSongRepository_GetUniqueArtists(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -160,7 +160,7 @@ func TestSongRepository_GetUniqueArtists(t *testing.T) {
 
 func TestSongRepository_Count(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -180,7 +180,7 @@ func TestSongRepository_Count(t *testing.T) {
 
 func TestSongRepository_Delete(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -201,7 +201,7 @@ func TestSongRepository_Delete(t *testing.T) {
 
 func TestSongRepository_CreateBatch(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -225,7 +225,7 @@ func TestSongRepository_CreateBatch(t *testing.T) {
 
 func TestSongRepository_CreateBatch_Empty(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -238,7 +238,7 @@ func TestSongRepository_CreateBatch_Empty(t *testing.T) {
 
 func TestSongRepository_Update(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -260,7 +260,7 @@ func TestSongRepository_Update(t *testing.T) {
 
 func TestSongRepository_FindByPath(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -279,7 +279,7 @@ func TestSongRepository_FindByPath(t *testing.T) {
 
 func TestSongRepository_FindByPath_NotFound(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -292,7 +292,7 @@ func TestSongRepository_FindByPath_NotFound(t *testing.T) {
 
 func TestSongRepository_FindByAlbumArtist(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -312,7 +312,7 @@ func TestSongRepository_FindByAlbumArtist(t *testing.T) {
 
 func TestSongRepository_FindByGenre(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -333,7 +333,7 @@ func TestSongRepository_FindByGenre(t *testing.T) {
 
 func TestSongRepository_FindUnmatched_Spotify(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -352,7 +352,7 @@ func TestSongRepository_FindUnmatched_Spotify(t *testing.T) {
 
 func TestSongRepository_FindUnmatched_InvalidSource(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -365,7 +365,7 @@ func TestSongRepository_FindUnmatched_InvalidSource(t *testing.T) {
 
 func TestSongRepository_GetUniqueGenres(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -385,7 +385,7 @@ func TestSongRepository_GetUniqueGenres(t *testing.T) {
 
 func TestSongRepository_FindAll(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -404,7 +404,7 @@ func TestSongRepository_FindAll(t *testing.T) {
 
 func TestSongRepository_DeleteAll(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()
@@ -425,7 +425,7 @@ func TestSongRepository_DeleteAll(t *testing.T) {
 
 func TestSongRepository_Delete_NotFound(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	repo := NewSongRepository(db.DB())
 	ctx := context.Background()

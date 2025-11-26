@@ -29,7 +29,7 @@ func setupPlaylistTestDB(t *testing.T) *database.Database {
 
 func TestPlaylistRepository_Create(t *testing.T) {
 	db := setupPlaylistTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewPlaylistRepository(db.DB())
 	ctx := context.Background()
@@ -53,7 +53,7 @@ func TestPlaylistRepository_Create(t *testing.T) {
 
 func TestPlaylistRepository_FindByID(t *testing.T) {
 	db := setupPlaylistTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewPlaylistRepository(db.DB())
 	ctx := context.Background()
@@ -77,7 +77,7 @@ func TestPlaylistRepository_FindByID(t *testing.T) {
 
 func TestPlaylistRepository_FindByID_NotFound(t *testing.T) {
 	db := setupPlaylistTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewPlaylistRepository(db.DB())
 	ctx := context.Background()
@@ -90,7 +90,7 @@ func TestPlaylistRepository_FindByID_NotFound(t *testing.T) {
 
 func TestPlaylistRepository_Update(t *testing.T) {
 	db := setupPlaylistTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewPlaylistRepository(db.DB())
 	ctx := context.Background()
@@ -116,7 +116,7 @@ func TestPlaylistRepository_Update(t *testing.T) {
 
 func TestPlaylistRepository_Delete(t *testing.T) {
 	db := setupPlaylistTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewPlaylistRepository(db.DB())
 	ctx := context.Background()
@@ -141,7 +141,7 @@ func TestPlaylistRepository_Delete(t *testing.T) {
 
 func TestPlaylistRepository_Delete_NotFound(t *testing.T) {
 	db := setupPlaylistTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewPlaylistRepository(db.DB())
 	ctx := context.Background()
@@ -154,7 +154,7 @@ func TestPlaylistRepository_Delete_NotFound(t *testing.T) {
 
 func TestPlaylistRepository_FindAll(t *testing.T) {
 	db := setupPlaylistTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewPlaylistRepository(db.DB())
 	ctx := context.Background()
@@ -174,7 +174,7 @@ func TestPlaylistRepository_FindAll(t *testing.T) {
 
 func TestPlaylistRepository_FindByType(t *testing.T) {
 	db := setupPlaylistTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewPlaylistRepository(db.DB())
 	ctx := context.Background()
@@ -195,7 +195,7 @@ func TestPlaylistRepository_FindByType(t *testing.T) {
 
 func TestPlaylistRepository_FindByDataSource(t *testing.T) {
 	db := setupPlaylistTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewPlaylistRepository(db.DB())
 	ctx := context.Background()
@@ -216,7 +216,7 @@ func TestPlaylistRepository_FindByDataSource(t *testing.T) {
 
 func TestPlaylistRepository_AddSongs(t *testing.T) {
 	db := setupPlaylistTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	playlistRepo := NewPlaylistRepository(db.DB())
 	songRepo := NewSongRepository(db.DB())
@@ -247,7 +247,7 @@ func TestPlaylistRepository_AddSongs(t *testing.T) {
 
 func TestPlaylistRepository_AddSongs_Empty(t *testing.T) {
 	db := setupPlaylistTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewPlaylistRepository(db.DB())
 	ctx := context.Background()
@@ -263,7 +263,7 @@ func TestPlaylistRepository_AddSongs_Empty(t *testing.T) {
 
 func TestPlaylistRepository_RemoveSongs(t *testing.T) {
 	db := setupPlaylistTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	playlistRepo := NewPlaylistRepository(db.DB())
 	songRepo := NewSongRepository(db.DB())
@@ -292,7 +292,7 @@ func TestPlaylistRepository_RemoveSongs(t *testing.T) {
 
 func TestPlaylistRepository_RemoveSongs_Empty(t *testing.T) {
 	db := setupPlaylistTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewPlaylistRepository(db.DB())
 	ctx := context.Background()
@@ -308,7 +308,7 @@ func TestPlaylistRepository_RemoveSongs_Empty(t *testing.T) {
 
 func TestPlaylistRepository_GetSongs_Empty(t *testing.T) {
 	db := setupPlaylistTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := NewPlaylistRepository(db.DB())
 	ctx := context.Background()
