@@ -243,8 +243,8 @@ func TestConstants(t *testing.T) {
 		t.Errorf("DatabaseFile = %v, want database_idx.tcd", DatabaseFile)
 	}
 
-	if TagCacheMagic != 0x54434801 {
-		t.Errorf("TagCacheMagic = %x, want 0x54434801", TagCacheMagic)
+	if TagCacheMagic != 0x54434810 {
+		t.Errorf("TagCacheMagic = %x, want 0x54434810", TagCacheMagic)
 	}
 }
 
@@ -363,15 +363,27 @@ func TestParser_ReadTagFile_Valid(t *testing.T) {
 	tmpDir := t.TempDir()
 	tagFile := filepath.Join(tmpDir, "test.tcd")
 
-	// Create valid tag file
+	// Create valid tag file with proper Rockbox format
+	// Each entry has: tag_length (4 bytes), idx_id (4 bytes), tag_data (tag_length bytes)
 	header := make([]byte, 12)
 	binary.LittleEndian.PutUint32(header[0:4], TagCacheMagic)
-	binary.LittleEndian.PutUint32(header[4:8], 12) // data size
+	binary.LittleEndian.PutUint32(header[4:8], 28) // data size (two entries: 8+6 + 8+6 = 28)
 	binary.LittleEndian.PutUint32(header[8:12], 2) // entry count
 
-	data := []byte("test1\x00test2\x00")
+	// Entry 0: tag_length=6, idx_id=0, tag_data="test1\0"
+	entry1 := make([]byte, 14)
+	binary.LittleEndian.PutUint32(entry1[0:4], 6) // tag_length including null
+	binary.LittleEndian.PutUint32(entry1[4:8], 0) // idx_id
+	copy(entry1[8:], []byte("test1\x00"))         // tag_data
 
-	fullData := append(header, data...)
+	// Entry 1: tag_length=6, idx_id=1, tag_data="test2\0"
+	entry2 := make([]byte, 14)
+	binary.LittleEndian.PutUint32(entry2[0:4], 6) // tag_length including null
+	binary.LittleEndian.PutUint32(entry2[4:8], 1) // idx_id
+	copy(entry2[8:], []byte("test2\x00"))         // tag_data
+
+	fullData := append(header, entry1...)
+	fullData = append(fullData, entry2...)
 	_ = os.WriteFile(tagFile, fullData, 0644)
 
 	parser := NewParser(tmpDir, nil)
@@ -387,6 +399,10 @@ func TestParser_ReadTagFile_Valid(t *testing.T) {
 
 	if result[0] != "test1" {
 		t.Errorf("readTagFile() entry 0 = %v, want test1", result[0])
+	}
+
+	if result[1] != "test2" {
+		t.Errorf("readTagFile() entry 1 = %v, want test2", result[1])
 	}
 }
 

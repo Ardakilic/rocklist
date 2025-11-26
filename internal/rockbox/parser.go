@@ -22,8 +22,9 @@ const (
 	TagCacheDir = ".rockbox"
 	// DatabaseFile is the main database index file
 	DatabaseFile = "database_idx.tcd"
-	// TagCacheMagic is the magic number for TagCache files
-	TagCacheMagic = 0x54434801 // "TCH\x01"
+	// TagCacheMagic is the magic number for TagCache files (version 0x10)
+	// From Rockbox source: TAGCACHE_MAGIC = 0x54434810 in apps/tagcache.c
+	TagCacheMagic = 0x54434810 // "TCH\x10"
 )
 
 // TagType represents the type of a tag in the Rockbox database
@@ -191,7 +192,7 @@ func (p *Parser) parseDatabase(ctx context.Context) ([]*models.Song, error) {
 	entries, err := p.readTagCacheEntries(ctx, rockboxDir)
 	if err != nil {
 		// If we can't read the tag cache, try scanning the filesystem
-		p.logger.Info("TagCache not readable, falling back to filesystem scan")
+		p.logger.Info("TagCache not readable (%v), falling back to filesystem scan", err)
 		return p.scanFilesystem(ctx)
 	}
 
@@ -230,6 +231,9 @@ func (p *Parser) readTagCacheEntries(ctx context.Context, rockboxDir string) ([]
 
 	// Read tag files
 	songs := make([]*models.Song, 0, entryCount)
+	// Tag files correspond to tag types defined in tagcache.h:
+	// tag_artist=0, tag_album=1, tag_genre=2, tag_title=3, tag_filename=4,
+	// tag_composer=5, tag_comment=6, tag_albumartist=7, tag_grouping=8
 	tagFiles := []string{
 		"database_0.tcd", // Artist
 		"database_1.tcd", // Album
@@ -239,6 +243,7 @@ func (p *Parser) readTagCacheEntries(ctx context.Context, rockboxDir string) ([]
 		"database_5.tcd", // Composer
 		"database_6.tcd", // Comment
 		"database_7.tcd", // Album Artist
+		"database_8.tcd", // Grouping
 	}
 
 	tagData := make(map[int]map[int]string)
@@ -343,7 +348,16 @@ type NumericTagData struct {
 	LastPlayed  int64
 }
 
+// TagFileEntry represents an entry in a Rockbox tag file
+// From tagcache.c: struct tagfile_entry { int32_t tag_length; int32_t idx_id; char tag_data[0]; }
+type TagFileEntry struct {
+	TagLength int32  // Length of tag data including null terminator
+	IdxID     int32  // Index ID in master index file
+	TagData   string // The actual tag string
+}
+
 // readTagFile reads a single tag file and returns a map of index -> value
+// Tag files contain entries with: tag_length (4 bytes), idx_id (4 bytes), tag_data (variable)
 func (p *Parser) readTagFile(path string) (map[int]string, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -351,41 +365,65 @@ func (p *Parser) readTagFile(path string) (map[int]string, error) {
 	}
 	defer func() { _ = file.Close() }()
 
-	// Read header
+	// Read header (12 bytes: magic, datasize, entry_count)
 	header := make([]byte, 12)
 	if _, err := io.ReadFull(file, header); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read tag file header: %w", err)
 	}
 
 	magic := binary.LittleEndian.Uint32(header[0:4])
 	if magic != TagCacheMagic {
-		return nil, fmt.Errorf("invalid magic number")
+		// Try big endian for cross-platform compatibility
+		magic = binary.BigEndian.Uint32(header[0:4])
+		if magic != TagCacheMagic {
+			return nil, fmt.Errorf("invalid magic number: got 0x%08x, want 0x%08x", magic, TagCacheMagic)
+		}
 	}
 
-	dataSize := binary.LittleEndian.Uint32(header[4:8])
+	// dataSize := binary.LittleEndian.Uint32(header[4:8]) // Total data size (unused, we read until EOF)
 	entryCount := binary.LittleEndian.Uint32(header[8:12])
 
 	result := make(map[int]string, entryCount)
 
-	// Read string data
-	data := make([]byte, dataSize)
-	if _, err := io.ReadFull(file, data); err != nil {
-		return nil, err
-	}
+	// Read tag file entries
+	// Each entry has: tag_length (4 bytes), idx_id (4 bytes), tag_data (tag_length bytes)
+	for i := 0; i < int(entryCount); i++ {
+		// Read entry header (8 bytes)
+		entryHeader := make([]byte, 8)
+		if _, err := io.ReadFull(file, entryHeader); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, fmt.Errorf("failed to read entry header at index %d: %w", i, err)
+		}
 
-	// Parse null-terminated strings
-	idx := 0
-	offset := 0
-	for offset < len(data) && idx < int(entryCount) {
-		end := offset
-		for end < len(data) && data[end] != 0 {
-			end++
+		tagLength := int32(binary.LittleEndian.Uint32(entryHeader[0:4]))
+		idxID := int32(binary.LittleEndian.Uint32(entryHeader[4:8]))
+
+		if tagLength <= 0 {
+			continue // Skip deleted entries (empty tag)
 		}
-		if end > offset {
-			result[idx] = string(data[offset:end])
+
+		// Read tag data
+		tagData := make([]byte, tagLength)
+		if _, err := io.ReadFull(file, tagData); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, fmt.Errorf("failed to read tag data at index %d: %w", i, err)
 		}
-		idx++
-		offset = end + 1
+
+		// Remove null terminator if present
+		tagStr := string(tagData)
+		if len(tagStr) > 0 && tagStr[len(tagStr)-1] == 0 {
+			tagStr = tagStr[:len(tagStr)-1]
+		}
+		tagStr = strings.TrimRight(tagStr, "\x00")
+
+		// Map by idx_id (the master index this tag belongs to)
+		if idxID >= 0 {
+			result[int(idxID)] = tagStr
+		}
 	}
 
 	return result, nil
