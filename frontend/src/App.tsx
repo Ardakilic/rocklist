@@ -32,6 +32,7 @@ declare global {
           GetLogs: () => Promise<LogEntry[]>
           ClearLogs: () => void
           GetEnabledSources: () => Promise<string[]>
+          SelectDirectory: () => Promise<string>
         }
       }
     }
