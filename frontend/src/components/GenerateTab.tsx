@@ -3,6 +3,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
+import { Checkbox } from './ui/checkbox'
 import { Music, Loader2, Trash2 } from 'lucide-react'
 import type { LogEntry, Playlist } from '../App'
 
@@ -25,6 +26,7 @@ export function GenerateTab() {
   const [artist, setArtist] = useState('')
   const [tag, setTag] = useState('')
   const [limit, setLimit] = useState(50)
+  const [useAlbumArtist, setUseAlbumArtist] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [playlists, setPlaylists] = useState<Playlist[]>([])
@@ -74,7 +76,8 @@ export function GenerateTab() {
         playlistType,
         artist,
         tag,
-        limit
+        limit,
+        useAlbumArtist
       )
       
       const playlistList = await window.go.cmd.App.GetAllPlaylists()
@@ -184,6 +187,28 @@ export function GenerateTab() {
               value={limit}
               onChange={(e) => setLimit(parseInt(e.target.value) || 50)}
             />
+          </div>
+        </div>
+
+        {/* Use Album Artist Option */}
+        <div className="mt-4 flex items-start space-x-3">
+          <Checkbox
+            id="useAlbumArtist"
+            checked={useAlbumArtist}
+            onCheckedChange={(checked) => setUseAlbumArtist(checked === true)}
+          />
+          <div className="grid gap-1.5 leading-none">
+            <Label
+              htmlFor="useAlbumArtist"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            >
+              Use Album Artist if available
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              When enabled, songs will be matched using the Album Artist field instead of the Artist field.
+              This is useful for compilations and albums with multiple artists. If a song has no Album Artist,
+              the regular Artist field will be used as a fallback.
+            </p>
           </div>
         </div>
 

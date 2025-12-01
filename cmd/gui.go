@@ -125,13 +125,15 @@ func (a *App) GetLastParsedAt() interface{} {
 }
 
 // GeneratePlaylist generates a playlist
-func (a *App) GeneratePlaylist(dataSource, playlistType, artist, tag string, limit int) (interface{}, error) {
+// useAlbumArtist: when true, prioritizes album artist field for matching (with fallback to artist if empty)
+func (a *App) GeneratePlaylist(dataSource, playlistType, artist, tag string, limit int, useAlbumArtist bool) (interface{}, error) {
 	req := &models.PlaylistRequest{
-		DataSource: models.DataSource(dataSource),
-		Type:       models.PlaylistType(playlistType),
-		Artist:     artist,
-		Tag:        tag,
-		Limit:      limit,
+		DataSource:     models.DataSource(dataSource),
+		Type:           models.PlaylistType(playlistType),
+		Artist:         artist,
+		Tag:            tag,
+		Limit:          limit,
+		UseAlbumArtist: useAlbumArtist,
 	}
 	return a.service.GeneratePlaylist(a.ctx, req)
 }

@@ -103,11 +103,12 @@ func (PlaylistSong) TableName() string {
 
 // PlaylistRequest represents a request to generate a playlist
 type PlaylistRequest struct {
-	Type       PlaylistType `json:"type"`
-	DataSource DataSource   `json:"data_source"`
-	Artist     string       `json:"artist,omitempty"`
-	Tag        string       `json:"tag,omitempty"`
-	Limit      int          `json:"limit,omitempty"` // Max songs to include
+	Type           PlaylistType `json:"type"`
+	DataSource     DataSource   `json:"data_source"`
+	Artist         string       `json:"artist,omitempty"`
+	Tag            string       `json:"tag,omitempty"`
+	Limit          int          `json:"limit,omitempty"`          // Max songs to include
+	UseAlbumArtist bool         `json:"use_album_artist,omitempty"` // Use album artist for matching if available
 }
 
 // Validate validates the playlist request

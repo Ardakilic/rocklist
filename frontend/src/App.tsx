@@ -22,7 +22,7 @@ declare global {
           ParseDatabase: (usePrefetched: boolean) => Promise<void>
           GetParseStatus: () => Promise<ParseStatus>
           GetLastParsedAt: () => Promise<string | null>
-          GeneratePlaylist: (dataSource: string, playlistType: string, artist: string, tag: string, limit: number) => Promise<Playlist>
+          GeneratePlaylist: (dataSource: string, playlistType: string, artist: string, tag: string, limit: number, useAlbumArtist: boolean) => Promise<Playlist>
           GetSongCount: () => Promise<number>
           GetUniqueArtists: () => Promise<string[]>
           GetUniqueGenres: () => Promise<string[]>

@@ -187,4 +187,86 @@ describe('GenerateTab component', () => {
       })
     }
   })
+
+  it('renders use album artist checkbox', () => {
+    render(<GenerateTab />)
+    
+    expect(screen.getByText('Use Album Artist if available')).toBeInTheDocument()
+    expect(screen.getByText(/When enabled, songs will be matched using the Album Artist field/i)).toBeInTheDocument()
+  })
+
+  it('toggles use album artist checkbox', () => {
+    render(<GenerateTab />)
+    
+    const checkbox = screen.getByRole('checkbox')
+    expect(checkbox).not.toBeChecked()
+    
+    fireEvent.click(checkbox)
+    expect(checkbox).toBeChecked()
+    
+    fireEvent.click(checkbox)
+    expect(checkbox).not.toBeChecked()
+  })
+
+  it('passes use album artist value to generate playlist', async () => {
+    vi.mocked(window.go.cmd.App.GetEnabledSources).mockResolvedValue(['lastfm', 'musicbrainz'])
+    
+    render(<GenerateTab />)
+    
+    // Wait for enabled sources to load
+    await waitFor(() => {
+      expect(window.go.cmd.App.GetEnabledSources).toHaveBeenCalled()
+    })
+    
+    // Fill in artist name
+    const artistInput = screen.getByPlaceholderText(/enter artist name/i)
+    fireEvent.change(artistInput, { target: { value: 'Test Artist' } })
+    
+    // Enable use album artist
+    const checkbox = screen.getByRole('checkbox')
+    fireEvent.click(checkbox)
+    
+    const generateButton = screen.getByRole('button', { name: /generate playlist/i })
+    fireEvent.click(generateButton)
+    
+    await waitFor(() => {
+      expect(window.go.cmd.App.GeneratePlaylist).toHaveBeenCalledWith(
+        'lastfm',
+        'top_songs',
+        'Test Artist',
+        '',
+        50,
+        true // useAlbumArtist should be true
+      )
+    })
+  })
+
+  it('passes use album artist false by default', async () => {
+    vi.mocked(window.go.cmd.App.GetEnabledSources).mockResolvedValue(['lastfm', 'musicbrainz'])
+    
+    render(<GenerateTab />)
+    
+    // Wait for enabled sources to load
+    await waitFor(() => {
+      expect(window.go.cmd.App.GetEnabledSources).toHaveBeenCalled()
+    })
+    
+    // Fill in artist name
+    const artistInput = screen.getByPlaceholderText(/enter artist name/i)
+    fireEvent.change(artistInput, { target: { value: 'Test Artist' } })
+    
+    const generateButton = screen.getByRole('button', { name: /generate playlist/i })
+    fireEvent.click(generateButton)
+    
+    await waitFor(() => {
+      expect(window.go.cmd.App.GeneratePlaylist).toHaveBeenCalledWith(
+        'lastfm',
+        'top_songs',
+        'Test Artist',
+        '',
+        50,
+        false // useAlbumArtist should be false by default
+      )
+    })
+  })
 })

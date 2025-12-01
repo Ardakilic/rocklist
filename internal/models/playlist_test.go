@@ -151,3 +151,57 @@ func TestPlaylistSong_TableName(t *testing.T) {
 		t.Errorf("PlaylistSong.TableName() = %v, want playlist_songs", got)
 	}
 }
+
+func TestPlaylistRequest_UseAlbumArtist(t *testing.T) {
+	tests := []struct {
+		name           string
+		req            PlaylistRequest
+		wantErr        error
+		useAlbumArtist bool
+	}{
+		{
+			name: "request with UseAlbumArtist true",
+			req: PlaylistRequest{
+				Type:           PlaylistTypeTopSongs,
+				DataSource:     DataSourceLastFM,
+				Artist:         "Metallica",
+				UseAlbumArtist: true,
+			},
+			wantErr:        nil,
+			useAlbumArtist: true,
+		},
+		{
+			name: "request with UseAlbumArtist false (default)",
+			req: PlaylistRequest{
+				Type:       PlaylistTypeTopSongs,
+				DataSource: DataSourceLastFM,
+				Artist:     "Metallica",
+			},
+			wantErr:        nil,
+			useAlbumArtist: false,
+		},
+		{
+			name: "tag request with UseAlbumArtist",
+			req: PlaylistRequest{
+				Type:           PlaylistTypeTag,
+				DataSource:     DataSourceLastFM,
+				Tag:            "metal",
+				UseAlbumArtist: true,
+			},
+			wantErr:        nil,
+			useAlbumArtist: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.req.Validate()
+			if err != tt.wantErr {
+				t.Errorf("PlaylistRequest.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.req.UseAlbumArtist != tt.useAlbumArtist {
+				t.Errorf("PlaylistRequest.UseAlbumArtist = %v, want %v", tt.req.UseAlbumArtist, tt.useAlbumArtist)
+			}
+		})
+	}
+}

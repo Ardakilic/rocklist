@@ -116,8 +116,12 @@ func (s *PlaylistService) GeneratePlaylist(ctx context.Context, req *models.Play
 
 	s.logger.Info("Found %d tracks from %s, matching with local library...", len(externalTracks), req.DataSource.DisplayName())
 
+	if req.UseAlbumArtist {
+		s.logger.Info("Using album artist field for matching (with fallback to artist)")
+	}
+
 	// Match external tracks to local songs
-	matchedSongs, matchStats := s.matchTracks(ctx, externalTracks)
+	matchedSongs, matchStats := s.matchTracks(ctx, externalTracks, req.UseAlbumArtist)
 
 	s.logger.Info("Matched %d/%d tracks (%.1f%% match rate)",
 		matchStats.Matched, matchStats.Total, matchStats.MatchRate()*100)
@@ -298,14 +302,28 @@ func (ms *MatchStats) MatchRate() float64 {
 }
 
 // matchTracks matches external tracks to local songs
-func (s *PlaylistService) matchTracks(ctx context.Context, tracks []*api.TrackInfo) ([]*models.Song, *MatchStats) {
+// When useAlbumArtist is true, it prioritizes matching against album artist field
+func (s *PlaylistService) matchTracks(ctx context.Context, tracks []*api.TrackInfo, useAlbumArtist bool) ([]*models.Song, *MatchStats) {
 	stats := &MatchStats{Total: len(tracks)}
 	matched := make([]*models.Song, 0, len(tracks))
 	seen := make(map[uint]bool) // Avoid duplicates
 
 	for _, track := range tracks {
 		// Try to find matching song in local library
-		songs, err := s.songRepo.FindByArtist(ctx, track.Artist)
+		var songs []*models.Song
+		var err error
+
+		if useAlbumArtist {
+			// First try to find by album artist
+			songs, err = s.songRepo.FindByAlbumArtist(ctx, track.Artist)
+			if err != nil || len(songs) == 0 {
+				// Fall back to regular artist search
+				songs, err = s.songRepo.FindByArtist(ctx, track.Artist)
+			}
+		} else {
+			songs, err = s.songRepo.FindByArtist(ctx, track.Artist)
+		}
+
 		if err != nil || len(songs) == 0 {
 			s.logger.Debug("No songs found for artist: %s", track.Artist)
 			stats.Unmatched++
@@ -316,7 +334,7 @@ func (s *PlaylistService) matchTracks(ctx context.Context, tracks []*api.TrackIn
 		var bestMatch *models.Song
 		bestScore := 0.0
 		for _, song := range songs {
-			score := calculateMatchScore(track, song)
+			score := calculateMatchScore(track, song, useAlbumArtist)
 			if score > bestScore && score >= 0.5 {
 				bestScore = score
 				bestMatch = song
@@ -338,14 +356,29 @@ func (s *PlaylistService) matchTracks(ctx context.Context, tracks []*api.TrackIn
 }
 
 // calculateMatchScore calculates a match score between an external track and a local song
-func calculateMatchScore(track *api.TrackInfo, song *models.Song) float64 {
+// When useAlbumArtist is true, it prioritizes album artist for comparison (with fallback to artist)
+func calculateMatchScore(track *api.TrackInfo, song *models.Song, useAlbumArtist bool) float64 {
 	titleScore := stringSimilarity(
 		strings.ToLower(track.Title),
 		strings.ToLower(song.Title),
 	)
+
+	// Determine which artist field to use for comparison
+	var songArtist string
+	if useAlbumArtist {
+		// Use album artist if available, otherwise fall back to artist
+		songArtist = song.AlbumArtist
+		if songArtist == "" {
+			songArtist = song.Artist
+		}
+	} else {
+		// Use effective artist (album artist if available, else artist)
+		songArtist = song.GetEffectiveArtist()
+	}
+
 	artistScore := stringSimilarity(
 		strings.ToLower(track.Artist),
-		strings.ToLower(song.GetEffectiveArtist()),
+		strings.ToLower(songArtist),
 	)
 
 	// Title is more important than artist

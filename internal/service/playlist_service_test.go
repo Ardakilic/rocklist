@@ -399,34 +399,38 @@ func TestPlaylistService_MultipleClients(t *testing.T) {
 
 func TestCalculateMatchScore(t *testing.T) {
 	tests := []struct {
-		name     string
-		track    *api.TrackInfo
-		song     *models.Song
-		minScore float64
+		name           string
+		track          *api.TrackInfo
+		song           *models.Song
+		useAlbumArtist bool
+		minScore       float64
 	}{
 		{
 			"exact match",
 			&api.TrackInfo{Artist: "Metallica", Title: "Enter Sandman"},
 			&models.Song{Artist: "Metallica", Title: "Enter Sandman"},
+			false,
 			0.9,
 		},
 		{
 			"case insensitive",
 			&api.TrackInfo{Artist: "METALLICA", Title: "ENTER SANDMAN"},
 			&models.Song{Artist: "metallica", Title: "enter sandman"},
+			false,
 			0.9,
 		},
 		{
 			"different",
 			&api.TrackInfo{Artist: "Artist A", Title: "Song X"},
 			&models.Song{Artist: "Artist B", Title: "Song Y"},
+			false,
 			0.0,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			score := calculateMatchScore(tt.track, tt.song)
+			score := calculateMatchScore(tt.track, tt.song, tt.useAlbumArtist)
 			if score < tt.minScore {
 				t.Errorf("calculateMatchScore() = %v, want >= %v", score, tt.minScore)
 			}
@@ -953,6 +957,256 @@ func TestLevenshteinDistance_Extended(t *testing.T) {
 			result := levenshteinDistance(tt.a, tt.b)
 			if result != tt.want {
 				t.Errorf("levenshteinDistance(%q, %q) = %d, want %d", tt.a, tt.b, result, tt.want)
+			}
+		})
+	}
+}
+
+// Tests for UseAlbumArtist feature
+
+func TestCalculateMatchScore_UseAlbumArtist(t *testing.T) {
+	tests := []struct {
+		name           string
+		track          *api.TrackInfo
+		song           *models.Song
+		useAlbumArtist bool
+		minScore       float64
+		maxScore       float64
+	}{
+		{
+			name:           "match with album artist enabled - uses album artist",
+			track:          &api.TrackInfo{Artist: "Various Artists", Title: "Enter Sandman"},
+			song:           &models.Song{Artist: "Metallica", AlbumArtist: "Various Artists", Title: "Enter Sandman"},
+			useAlbumArtist: true,
+			minScore:       0.9,
+			maxScore:       1.0,
+		},
+		{
+			name:           "match with album artist disabled - uses effective artist (album artist)",
+			track:          &api.TrackInfo{Artist: "Various Artists", Title: "Enter Sandman"},
+			song:           &models.Song{Artist: "Metallica", AlbumArtist: "Various Artists", Title: "Enter Sandman"},
+			useAlbumArtist: false,
+			minScore:       0.9,
+			maxScore:       1.0,
+		},
+		{
+			name:           "album artist enabled but empty - falls back to artist",
+			track:          &api.TrackInfo{Artist: "Metallica", Title: "Enter Sandman"},
+			song:           &models.Song{Artist: "Metallica", AlbumArtist: "", Title: "Enter Sandman"},
+			useAlbumArtist: true,
+			minScore:       0.9,
+			maxScore:       1.0,
+		},
+		{
+			name:           "album artist enabled - different artist but matching album artist",
+			track:          &api.TrackInfo{Artist: "VA", Title: "Enter Sandman"},
+			song:           &models.Song{Artist: "Metallica", AlbumArtist: "VA", Title: "Enter Sandman"},
+			useAlbumArtist: true,
+			minScore:       0.9,
+			maxScore:       1.0,
+		},
+		{
+			name:           "album artist disabled - different from track artist",
+			track:          &api.TrackInfo{Artist: "Iron Maiden", Title: "Enter Sandman"},
+			song:           &models.Song{Artist: "Metallica", AlbumArtist: "Various Artists", Title: "Enter Sandman"},
+			useAlbumArtist: false,
+			minScore:       0.0,
+			maxScore:       0.75, // Title matches perfectly (0.6*1.0), artist has partial similarity
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			score := calculateMatchScore(tt.track, tt.song, tt.useAlbumArtist)
+			if score < tt.minScore || score > tt.maxScore {
+				t.Errorf("calculateMatchScore() = %v, want between %v and %v", score, tt.minScore, tt.maxScore)
+			}
+		})
+	}
+}
+
+func TestPlaylistService_GeneratePlaylist_UseAlbumArtist(t *testing.T) {
+	// Songs with album artist different from artist (like compilation albums)
+	songs := []*models.Song{
+		{Model: gorm.Model{ID: 1}, Artist: "Metallica", AlbumArtist: "Various Artists", Title: "Enter Sandman", Path: "/music/va/sandman.mp3"},
+		{Model: gorm.Model{ID: 2}, Artist: "Megadeth", AlbumArtist: "Various Artists", Title: "Peace Sells", Path: "/music/va/peace.mp3"},
+	}
+	songRepo := &mockSongRepositoryWithAlbumArtist{songs: songs}
+	playlistRepo := &mockPlaylistRepository{}
+	logger := &mockServiceLogger{}
+
+	svc := NewPlaylistService(songRepo, playlistRepo, "/playlists", logger)
+
+	client := &mockAPIClient{
+		source:     models.DataSourceLastFM,
+		configured: true,
+		topTracks: []*api.TrackInfo{
+			{Artist: "Various Artists", Title: "Enter Sandman"},
+			{Artist: "Various Artists", Title: "Peace Sells"},
+		},
+	}
+	svc.RegisterClient(models.DataSourceLastFM, client)
+
+	req := &models.PlaylistRequest{
+		DataSource:     models.DataSourceLastFM,
+		Type:           models.PlaylistTypeTopSongs,
+		Artist:         "Various Artists",
+		Limit:          10,
+		UseAlbumArtist: true,
+	}
+
+	playlist, err := svc.GeneratePlaylist(context.Background(), req)
+	if err != nil {
+		t.Fatalf("GeneratePlaylist() with UseAlbumArtist error = %v", err)
+	}
+	if playlist == nil {
+		t.Fatal("GeneratePlaylist() with UseAlbumArtist returned nil playlist")
+	}
+	if playlist.SongCount == 0 {
+		t.Error("GeneratePlaylist() with UseAlbumArtist should have matched songs")
+	}
+}
+
+func TestPlaylistService_GeneratePlaylist_UseAlbumArtist_FallbackToArtist(t *testing.T) {
+	// Songs without album artist - should fall back to artist
+	songs := []*models.Song{
+		{Model: gorm.Model{ID: 1}, Artist: "Metallica", AlbumArtist: "", Title: "Enter Sandman", Path: "/music/metallica/sandman.mp3"},
+	}
+	songRepo := &mockSongRepositoryWithAlbumArtist{songs: songs, albumArtistSongs: []*models.Song{}}
+	playlistRepo := &mockPlaylistRepository{}
+	logger := &mockServiceLogger{}
+
+	svc := NewPlaylistService(songRepo, playlistRepo, "/playlists", logger)
+
+	client := &mockAPIClient{
+		source:     models.DataSourceLastFM,
+		configured: true,
+		topTracks: []*api.TrackInfo{
+			{Artist: "Metallica", Title: "Enter Sandman"},
+		},
+	}
+	svc.RegisterClient(models.DataSourceLastFM, client)
+
+	req := &models.PlaylistRequest{
+		DataSource:     models.DataSourceLastFM,
+		Type:           models.PlaylistTypeTopSongs,
+		Artist:         "Metallica",
+		Limit:          10,
+		UseAlbumArtist: true, // Enabled but should fall back since album artist is empty
+	}
+
+	playlist, err := svc.GeneratePlaylist(context.Background(), req)
+	if err != nil {
+		t.Fatalf("GeneratePlaylist() with UseAlbumArtist fallback error = %v", err)
+	}
+	if playlist == nil {
+		t.Fatal("GeneratePlaylist() with UseAlbumArtist fallback returned nil playlist")
+	}
+	if playlist.SongCount == 0 {
+		t.Error("GeneratePlaylist() with UseAlbumArtist fallback should have matched songs via artist field")
+	}
+}
+
+func TestPlaylistService_GeneratePlaylist_WithoutUseAlbumArtist(t *testing.T) {
+	songs := []*models.Song{
+		{Model: gorm.Model{ID: 1}, Artist: "Metallica", AlbumArtist: "Various Artists", Title: "Enter Sandman", Path: "/music/metallica/sandman.mp3"},
+	}
+	songRepo := &mockSongRepository{songs: songs}
+	playlistRepo := &mockPlaylistRepository{}
+	logger := &mockServiceLogger{}
+
+	svc := NewPlaylistService(songRepo, playlistRepo, "/playlists", logger)
+
+	client := &mockAPIClient{
+		source:     models.DataSourceLastFM,
+		configured: true,
+		topTracks: []*api.TrackInfo{
+			{Artist: "Metallica", Title: "Enter Sandman"},
+		},
+	}
+	svc.RegisterClient(models.DataSourceLastFM, client)
+
+	req := &models.PlaylistRequest{
+		DataSource:     models.DataSourceLastFM,
+		Type:           models.PlaylistTypeTopSongs,
+		Artist:         "Metallica",
+		Limit:          10,
+		UseAlbumArtist: false, // Disabled - should use regular artist matching
+	}
+
+	playlist, err := svc.GeneratePlaylist(context.Background(), req)
+	if err != nil {
+		t.Fatalf("GeneratePlaylist() without UseAlbumArtist error = %v", err)
+	}
+	if playlist == nil {
+		t.Fatal("GeneratePlaylist() without UseAlbumArtist returned nil playlist")
+	}
+}
+
+// mockSongRepositoryWithAlbumArtist extends mockSongRepository with album artist support
+type mockSongRepositoryWithAlbumArtist struct {
+	mockSongRepository
+	songs            []*models.Song
+	albumArtistSongs []*models.Song
+}
+
+func (m *mockSongRepositoryWithAlbumArtist) FindByArtist(ctx context.Context, artist string) ([]*models.Song, error) {
+	return m.songs, nil
+}
+
+func (m *mockSongRepositoryWithAlbumArtist) FindByAlbumArtist(ctx context.Context, albumArtist string) ([]*models.Song, error) {
+	if m.albumArtistSongs != nil {
+		return m.albumArtistSongs, nil
+	}
+	// Return songs that have matching album artist
+	var result []*models.Song
+	for _, s := range m.songs {
+		if s.AlbumArtist == albumArtist {
+			result = append(result, s)
+		}
+	}
+	return result, nil
+}
+
+func TestPlaylistRequest_Validate_WithUseAlbumArtist(t *testing.T) {
+	tests := []struct {
+		name           string
+		req            *models.PlaylistRequest
+		wantErr        bool
+		useAlbumArtist bool
+	}{
+		{
+			name: "valid request with UseAlbumArtist true",
+			req: &models.PlaylistRequest{
+				Type:           models.PlaylistTypeTopSongs,
+				DataSource:     models.DataSourceLastFM,
+				Artist:         "Metallica",
+				UseAlbumArtist: true,
+			},
+			wantErr:        false,
+			useAlbumArtist: true,
+		},
+		{
+			name: "valid request with UseAlbumArtist false",
+			req: &models.PlaylistRequest{
+				Type:           models.PlaylistTypeTopSongs,
+				DataSource:     models.DataSourceLastFM,
+				Artist:         "Metallica",
+				UseAlbumArtist: false,
+			},
+			wantErr:        false,
+			useAlbumArtist: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.req.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("PlaylistRequest.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.req.UseAlbumArtist != tt.useAlbumArtist {
+				t.Errorf("PlaylistRequest.UseAlbumArtist = %v, want %v", tt.req.UseAlbumArtist, tt.useAlbumArtist)
 			}
 		})
 	}
